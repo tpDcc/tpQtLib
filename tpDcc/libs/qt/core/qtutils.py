@@ -63,9 +63,9 @@ FLOAT_RANGE_MIN = 0.1 + (-mathlib.MAX_INT - 1.0)
 FLOAT_RANGE_MAX = mathlib.MAX_INT + 0.1
 INT_RANGE_MIN = -mathlib.MAX_INT
 INT_RANGE_MAX = mathlib.MAX_INT
+CURRENT_DIR = os.path.expanduser('~')
 
 # ==============================================================================
-
 
 def is_pyqt():
     """
@@ -141,10 +141,12 @@ def wrapinstance(ptr, base=None):
     if ptr is None:
         return None
 
-    ptr = long(ptr)
+    ptr_type = long if python.is_python2() else int
+
+    ptr = ptr_type(ptr)
     if 'shiboken' in globals():
         if base is None:
-            qObj = shiboken.wrapInstance(long(ptr), QObject)
+            qObj = shiboken.wrapInstance(ptr_type(ptr), QObject)
             meta_obj = qObj.metaObject()
             cls = meta_obj.className()
             super_cls = meta_obj.superClass().className()
@@ -155,13 +157,13 @@ def wrapinstance(ptr, base=None):
             else:
                 base = QWidget
         try:
-            return shiboken.wrapInstance(long(ptr), base)
+            return shiboken.wrapInstance(ptr_type(ptr), base)
         except Exception:
             from PySide.shiboken import wrapInstance
-            return wrapInstance(long(ptr), base)
+            return wrapInstance(ptr_type(ptr), base)
     elif 'sip' in globals():
         base = QObject
-        return shiboken.wrapinstance(long(ptr), base)
+        return shiboken.wrapinstance(ptr_type(ptr), base)
     else:
         print('Failed to wrap object ...')
         return None
@@ -172,8 +174,10 @@ def unwrapinstance(object):
     Unwraps objects with PySide
     """
 
-    return long(shiboken.getCppPointer(object)[0])
-
+    if python.is_python2():
+        return long(shiboken.getCppPointer(object)[0])
+    else:
+        return int(shiboken.getCppPointer(object)[0])
 
 @contextlib.contextmanager
 def app():
@@ -377,6 +381,18 @@ def clear_layout(layout):
     #             w.setParent(None)
 
 
+def clear_stack_widget(stack_widget):
+    """
+    Clears all the widgets stacked in the given stack widget
+    :param stack_widget: QStackWidget
+    """
+
+    for i in range(stack_widget.count(), 0, -1):
+        widget = stack_widget.widget(i)
+        stack_widget.removeWidget(widget)
+        widget.deleteLater()
+
+
 def layout_items(layout):
     """
     Returns the items from the given layout and returns them
@@ -470,12 +486,19 @@ def distance_point_to_line(p, v0, v1):
 
 def qhash(inputstr):
     instr = ""
-    if isinstance(inputstr, str):
-        instr = inputstr
-    elif isinstance(inputstr, unicode):
-        instr = inputstr.encode("utf8")
+
+    if python.is_python2():
+        if isinstance(inputstr, str):
+            instr = inputstr
+        elif isinstance(inputstr, unicode):
+            instr = inputstr.encode("utf8")
+        else:
+            return -1
     else:
-        return -1
+        if python.is_string(inputstr):
+            instr = inputstr
+        else:
+            return -1
 
     h = 0x00000000
     for i in range(0, len(instr)):
@@ -538,7 +561,7 @@ def close_and_cleanup(widget):
         widget.deleteLater()
 
 
-def get_string_input(message, title='Rename', old_name=None):
+def get_string_input(message, title='Rename', old_name=None, parent=None):
     """
     Shows a Input dialog to allow the user to input a new string
     :param message: str, mesage to show in the dialog
@@ -547,7 +570,7 @@ def get_string_input(message, title='Rename', old_name=None):
     :return: str, new name
     """
 
-    dialog = QInputDialog()
+    dialog = QInputDialog(parent)
     flags = dialog.windowFlags() ^ Qt.WindowContextHelpButtonHint | Qt.WindowStaysOnTopHint
 
     if not old_name:
@@ -628,7 +651,7 @@ def get_permission(message=None, cancel=True, title='Permission', parent=None):
     :return: bool
     """
 
-    message_box = QMessageBox()
+    message_box = QMessageBox(parent=parent)
     message_box.setWindowTitle(title)
     flags = message_box.windowFlags() ^ Qt.WindowContextHelpButtonHint | Qt.WindowStaysOnTopHint
     if message:
@@ -660,7 +683,7 @@ def get_save_permission(message, file_path=None, title='Permission', parent=None
     :return: bool
     """
 
-    message_box = QMessageBox()
+    message_box = QMessageBox(parent=parent)
     message_box.setWindowTitle(title)
     flags = message_box.windowFlags() ^ Qt.WindowContextHelpButtonHint | Qt.WindowStaysOnTopHint
     if file_path:
@@ -957,6 +980,32 @@ def create_flat_button(
         btn.customContextMenuRequested.connect(context)
 
     return btn
+
+
+def create_vertical_line():
+    """
+    Creates and returns a new vertical line
+    :return: QFrame
+    """
+
+    line_frame = QFrame()
+    line_frame.setFrameShape(QFrame.VLine)
+    line_frame.setFrameShadow(QFrame.Sunken)
+
+    return line_frame
+
+
+def create_horizontal_line():
+    """
+    Creates and returns a new horizontal line
+    :return: QFrame
+    """
+
+    line_frame = QFrame()
+    line_frame.setFrameShape(QFrame.HLine)
+    line_frame.setFrameShadow(QFrame.Sunken)
+
+    return line_frame
 
 
 def get_or_create_menu(menu_bar, menu_title):
@@ -1352,3 +1401,73 @@ def center_widget_on_screen(widget):
     center_point = QApplication.desktop().screenGeometry(screen).center()
     frame_geo.moveCenter(center_point)
     widget.move(frame_geo.topLeft())
+
+
+def restore_cursor():
+    """
+    Restores current Qt application cursor
+    """
+
+    QApplication.restoreOverrideCursor()
+
+
+def set_wait_cursor(state=True):
+    """
+    Sets the wait cursor as the cursor for current Qt application
+    """
+
+    if state:
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+    else:
+        restore_cursor()
+
+
+def set_current_directory(path):
+    """
+    Updates global current directory
+    :param path: str, new current directory
+    """
+
+    global CURRENT_DIR
+    if os.path.isdir(path):
+        CURRENT_DIR = path
+    elif os.path.isfile(path):
+        CURRENT_DIR = os.path.dirname(path)
+
+
+def get_save_filename(title='Save File', file_dir=None, ext_filter='*', parent=None):
+    """
+    Opens a save file dialog
+    :param title: str
+    :param file_dir: str
+    :param ext_filter: str
+    :param parent: QWidget
+    :return: str, selected file path
+    """
+
+    file_dir = file_dir or CURRENT_DIR
+    file_dialog = QFileDialog.getSaveFileName(parent, title, file_dir, ext_filter)
+    file_path = file_dialog[0] or None
+    if file_path:
+        set_current_directory(file_path)
+
+    return file_dialog
+
+
+def get_open_filename(title='Open File', file_dir=None, ext_filter='*', parent=None):
+    """
+    Opens an open file dialog
+    :param title: str
+    :param file_dir: str
+    :param ext_filter: str
+    :param parent: QWidget
+    :return: str, selected file path
+    """
+
+    file_dir = file_dir or CURRENT_DIR
+    file_dialog = QFileDialog.getOpenFileName(parent, title, file_dir, ext_filter)
+    file_path = file_dialog[0] or None
+    if file_path:
+        set_current_directory(file_path)
+
+    return file_dialog
