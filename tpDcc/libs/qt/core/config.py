@@ -232,7 +232,7 @@ class ConfigurationManager(object):
         return found_paths
 
 
-@decorators.Singleton
+@decorators.add_metaclass(decorators.Singleton)
 class ConfigurationManagerSingleton(object):
     """
     Singleton class that holds configuration manager instance
