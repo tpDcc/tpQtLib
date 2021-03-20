@@ -11,7 +11,7 @@ import os
 import logging
 
 from Qt.QtCore import Qt, Signal, QSize
-from Qt.QtWidgets import QSizePolicy, QWidget, QFrame, QPushButton, QMenu, QAction, QAbstractItemView
+from Qt.QtWidgets import QSizePolicy, QFrame, QPushButton, QMenu, QAction
 from Qt.QtGui import QPixmap, QIcon
 
 from tpDcc import dcc
@@ -75,7 +75,7 @@ def get_projects(projects_path, project_class=None):
 
 class Project(base.BaseWidget):
     projectOpened = Signal(object)
-    projectRemoved = Signal()
+    projectRemoved = Signal(str)
     projectImageChanged = Signal(str)
 
     def __init__(self, project_data, parent=None):
@@ -130,8 +130,6 @@ class Project(base.BaseWidget):
         project_name = path.get_basename(project_data_path)
         project_data.set_directory(project_dir, project_name)
         project_options.set_directory(project_dir, 'options.json')
-        if not project_data or not project_data.has_settings():
-            LOGGER.warning('No valid project data found on Project Data File: {}'.format(project_data_path))
 
         project_name = project_data.get('name')
         project_path = path.get_dirname(path.get_dirname(project_data_path))
@@ -180,20 +178,23 @@ class Project(base.BaseWidget):
         menu = QMenu(self)
         remove_icon = resources.icon(name='delete')
         remove_action = QAction(remove_icon, 'Remove', menu)
-        remove_action.setStatusTip(consts.DELETE_PROJECT_TOOLTIP)
-        remove_action.setToolTip(consts.DELETE_PROJECT_TOOLTIP)
+        remove_tooltip = 'Delete selected project'
+        remove_action.setStatusTip(remove_tooltip)
+        remove_action.setToolTip(remove_tooltip)
         remove_action.triggered.connect(self._on_remove_project)
 
         folder_icon = resources.icon(name='open_folder', extension='png')
         folder_action = QAction(folder_icon, 'Open in Browser', menu)
-        folder_action.setStatusTip(consts.OPEN_PROJECT_IN_EXPLORER_TOOLTIP)
-        folder_action.setToolTip(consts.OPEN_PROJECT_IN_EXPLORER_TOOLTIP)
+        open_project_in_explorer_tooltip = 'Open project folder in explorer'
+        folder_action.setStatusTip(open_project_in_explorer_tooltip)
+        folder_action.setToolTip(open_project_in_explorer_tooltip)
         folder_action.triggered.connect(self._on_open_in_browser)
 
         image_icon = resources.icon(name='picture', extension='png')
         set_image_action = QAction(image_icon, 'Set Project Image', menu)
-        set_image_action.setToolTip(consts.SET_PROJECT_IMAGE_TOOLTIP)
-        set_image_action.setStatusTip(consts.SET_PROJECT_IMAGE_TOOLTIP)
+        set_project_image_tooltip = 'Set the image used by the project'
+        set_image_action.setToolTip(set_project_image_tooltip)
+        set_image_action.setStatusTip(set_project_image_tooltip)
         set_image_action.triggered.connect(self._on_set_project_image)
 
         for action in [remove_action, None, folder_action, None, set_image_action]:
@@ -283,12 +284,12 @@ class Project(base.BaseWidget):
             return
 
         encoded_image = encoded_image.encode('utf-8')
-        self.project_btn.setIcon(QIcon(QPixmap.fromImage(image.base64_to_image(encoded_image))))
+        project_icon = QIcon(QPixmap.fromImage(image.base64_to_image(encoded_image)))
+        if project_icon.isNull():
+            project_icon = resources.icon('tpDcc')
+        self.project_btn.setIcon(project_icon)
 
-    def remove(self):
-
-        from tpDcc.libs.qt.core import qtutils
-
+    def remove(self, force=False):
         if not path.is_dir(self.full_path):
             LOGGER.warning('Impossible to remove Project Path: {}'.format(self.full_path))
             return False
@@ -296,10 +297,12 @@ class Project(base.BaseWidget):
         project_name = self.project_data.name
         project_path = self.project_data.path
 
-        result = qtutils.get_permission(message='Are you sure you want to delete project: {}'.format(self.name),
-                                        title='Deleting Project', cancel=False)
-        if not result:
-            return
+        if not force:
+            result = qtutils.get_permission(
+                message='Are you sure you want to delete project: "{}"'.format(self.name),
+                title='Deleting Project', cancel=False, parent=self)
+            if not result:
+                return
 
         valid_delete = folder.delete_folder(folder_name=project_name, directory=project_path)
         if valid_delete is None:
@@ -351,7 +354,7 @@ class Project(base.BaseWidget):
         Internal callback function that is called when a project is opened
         """
 
-        LOGGER.debug('Loading project "{}" ...'.format(self.full_path))
+        LOGGER.info('Loading project "{}" ...'.format(self.full_path))
         self.projectOpened.emit(self)
 
     def _on_remove_project(self):
@@ -361,7 +364,7 @@ class Project(base.BaseWidget):
 
         valid_remove = self.remove()
         if valid_remove:
-            self.projectRemoved.emit()
+            self.projectRemoved.emit(self.name)
 
     def _on_open_in_browser(self):
         """
@@ -386,405 +389,15 @@ class Project(base.BaseWidget):
         valid_change = self._project_data.set_project_image(image_file)
 
         if valid_change:
+            project_image = self._project_data.settings.get('image')
+            if project_image:
+                self.set_image(project_image)
             self.projectImageChanged.emit(image_file)
-
-
-class ProjectViewer(base.BaseWidget, object):
-    projectOpened = Signal(object)
-
-    def __init__(self, project_class, parent=None):
-        self._settings = None
-        self._project_class = project_class
-        super(ProjectViewer, self).__init__(parent=parent)
-
-    def get_main_layout(self):
-        main_layout = layouts.FlowLayout(parent=self, spacing_x=0, spacing_y=0)
-        return main_layout
-
-    def set_settings(self, settings):
-        """
-        Set the settings used by this editor
-        This settings come from the main UI settings
-        :param settings: QtIniSettings
-        """
-
-        self._settings = settings
-        self.update_projects()
-
-    def add_project(self, project_widget):
-        if project_widget is None:
-            return
-
-        project_widget.projectOpened.connect(self._on_open_project)
-        project_widget.projectRemoved.connect(self._on_removed_project)
-        project_widget.projectImageChanged.connect(self._on_updated_project_image)
-
-        self.main_layout.addWidget(project_widget)
-
-    def get_widgets(self):
-        all_widgets = list()
-
-        for i in range(self.main_layout.count()):
-            widget_item = self.main_layout.itemAt(i)
-            if not widget_item:
-                continue
-            w = widget_item.widget()
-            all_widgets.append(w)
-
-        return all_widgets
-
-    def get_project_by_name(self, project_name):
-        for w in self.get_widgets():
-            if w.name == project_name:
-                return w
-
-        return None
-
-    def update_projects(self, project_path=None):
-
-        qtutils.clear_layout(self.main_layout)
-
-        # self.clear()
-
-        if not project_path:
-            if self._settings is None:
-                LOGGER.debug('No Projects Path defined yet ...')
-                return
-            if self._settings.has_setting('project_directory'):
-                project_path = self._settings.get('project_directory')
-
-        projects_found = get_projects(project_path, project_class=self._project_class)
-        for project_found in projects_found:
-            self.add_project(project_found)
-
-    def _on_open_project(self, project):
-        self.projectOpened.emit(project)
-
-    def _on_removed_project(self):
-        self.update_projects()
-
-    def _on_updated_project_image(self, image_path):
-        self.update_projects()
-
-
-class ProjectWidget(QWidget, object):
-
-    PROJECT_CLASS = Project
-
-    projectOpened = Signal(object)
-
-    def __init__(self, settings=None, parent=None):
-        super(ProjectWidget, self).__init__(parent=parent)
-
-        self._settings = None
-        self._history = None
-
-        main_layout = layouts.VerticalLayout(spacing=2, margins=(2, 2, 2, 2))
-        self.setLayout(main_layout)
-
-        self._tab_widget = tabs.BaseTabWidget(parent=self)
-        self._open_project = OpenProjectWidget(project_class=self.PROJECT_CLASS)
-        self._new_project = NewProjectWidget(project_class=self.PROJECT_CLASS)
-        self._tab_widget.addTab(self._open_project, 'Projects')
-        self._tab_widget.addTab(self._new_project, 'New Project')
-        main_layout.addWidget(self._tab_widget)
-
-        self._open_project.projectOpened.connect(self._on_project_opened)
-        self._new_project.projectCreated.connect(self._on_project_created)
-        self._tab_widget.currentChanged.connect(self._on_tab_changed)
-
-        self.set_settings(settings)
-
-    def set_settings(self, settings):
-        """
-        Set the settings used by this editor
-        This settings come from the main UI settings
-        :param settings: QtIniSettings
-        """
-
-        self._settings = settings
-        self._open_project.set_settings(settings)
-        self._new_project.set_settings(settings)
-
-    def set_projects_path(self, projects_path):
-        """
-        Sets the path where we want to search for projects
-        :param projects_path: str
-        """
-
-        self._open_project.set_projects_path(projects_path)
-
-    def get_project_by_name(self, project_name, force_update=True):
-        """
-        Returns project by its name
-        :param project_name: str
-        :param force_update: bool
-        :return: Project
-        """
-
-        if force_update:
-            self._open_project.get_projects_list().update_projects()
-
-        projects_list = self._open_project.get_projects_list()
-        return projects_list.get_project_by_name(project_name)
-
-    def open_project(self, project_name):
-        """
-        Opens project with given name
-        :param project_name: str
-        :return: Project
-        """
-
-        project_found = self.get_project_by_name(project_name)
-        if project_found:
-            project_found.open()
-            return project_found
-
-    def _on_project_opened(self, project):
-        self.projectOpened.emit(project)
-
-    def _on_project_created(self, project):
-        self._tab_widget.setCurrentIndex(0)
-
-    def _on_tab_changed(self, index):
-        if index == 0:
-            self._open_project.update_projects()
-
-
-class OpenProjectWidget(base.BaseWidget, object):
-    projectOpened = Signal(object)
-
-    def __init__(self, project_class, parent=None):
-
-        self._project_class = project_class
-        self._settings = None
-
-        super(OpenProjectWidget, self).__init__(parent=parent)
-
-        self._update_ui()
-
-    def get_main_layout(self):
-        return layouts.VerticalLayout(spacing=0, margins=(0, 0, 0, 0))
-
-    def ui(self):
-        super(OpenProjectWidget, self).ui()
-
-        self._search_widget = search.SearchFindWidget()
-        self._search_widget.set_placeholder_text('Filter Projects ...')
-
-        self._projects_list = ProjectViewer(project_class=self._project_class)
-        self._projects_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        buttons_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
-        buttons_layout.setAlignment(Qt.AlignCenter)
-
-        buttons_layout1 = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
-        buttons_layout1.setAlignment(Qt.AlignLeft)
-        self._browse_widget = directory.SelectFolder(label_text='Projects Path', use_app_browser=True, use_icon=True)
-        buttons_layout1.addWidget(self._browse_widget)
-
-        buttons_layout.addLayout(buttons_layout1)
-
-        self.main_layout.addWidget(self._search_widget)
-        self.main_layout.addWidget(dividers.Divider('PROJECTS', alignment=Qt.AlignCenter))
-        self.main_layout.addWidget(self._projects_list)
-        self.main_layout.addLayout(buttons_layout)
-
-    def setup_signals(self):
-        self._search_widget.textChanged.connect(self._on_search_project)
-        self._browse_widget.directoryChanged.connect(self._on_directory_browsed)
-        self._projects_list.projectOpened.connect(self._on_project_opened)
-
-    def get_projects_list(self):
-        """
-        Returns projects list widget
-        :return: ProjectViewer
-        """
-
-        return self._projects_list
-
-    def set_projects_path(self, projects_path):
-        """
-        Sets the path where we want to search for projects
-        :param projects_path: str
-        """
-
-        self._on_directory_browsed(projects_path)
-        self.update_projects(projects_path)
-
-    def set_settings(self, settings):
-        """
-        Set the settings used by this editor
-        This settings come from the main UI settings
-        :param settings: QtIniSettings
-        """
-
-        self._settings = settings
-        self._update_ui()
-
-        # We set the settings of the projects list after updating UI
-        self._projects_list.set_settings(settings)
-
-    def update_projects(self, project_path=None):
-        self._projects_list.update_projects(project_path=project_path)
-
-    def _update_ui(self, project_path=None):
-        """
-        Update UI based on the stored settings if exists
-        """
-
-        if not project_path:
-            if self._settings:
-                if self._settings.has_setting('project_directory'):
-                    project_path = self._settings.get('project_directory')
-                    LOGGER.debug('Project Path stored in settings: {}'.format(project_path))
-
-        if project_path:
-            self._browse_widget.set_directory(directory=project_path)
-            if self._settings:
-                self.update_projects()
-            else:
-                self.update_projects(project_path=project_path)
-
-    def _on_search_project(self, project_text):
-        for project in self._projects_list.get_widgets():
-            project.setVisible(project_text.lower() in project.name.lower())
-
-    def _on_directory_browsed(self, dir):
-        """
-        Set the project directory
-        :param dir: str
-        """
-
-        if not dir or not path.is_dir(dir):
-            return
-
-        if self._settings:
-            self._settings.set('project_directory', dir)
-            LOGGER.debug('Updated FactoRig Project Path: {}'.format(dir))
-            self._update_ui()
-        else:
-            self._update_ui(dir)
-
-    def _on_project_opened(self, project):
-        self.projectOpened.emit(project)
-
-
-class NewProjectWidget(base.BaseWidget, object):
-    projectCreated = Signal(object)
-
-    def __init__(self, project_class, parent=None):
-
-        self._settings = None
-        self._selected_template = None
-        self._project_class = project_class
-
-        super(NewProjectWidget, self).__init__(parent=parent)
-
-    def get_main_layout(self):
-        return layouts.VerticalLayout(spacing=0, margins=(0, 0, 0, 0))
-
-    def ui(self):
-        super(NewProjectWidget, self).ui()
-
-        self._search_widget = search.SearchFindWidget()
-        self._search_widget.set_placeholder_text('Filter Templates ...')
-
-        self._templates_list = TemplatesViewer(project_class=self._project_class)
-        self._templates_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        project_layout = layouts.HorizontalLayout(spacing=1, margins=(0, 0, 0, 0))
-
-        project_line_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
-        project_layout.addLayout(project_line_layout)
-        self._project_line = lineedit.BaseLineEdit(parent=self)
-        self._project_line.setPlaceholderText('Project Path')
-        self._project_line.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._project_btn = directory.SelectFolderButton(text='', use_app_browser=True)
-        project_line_layout.addWidget(self._project_line)
-        project_line_layout.addWidget(self._project_btn)
-        self._name_line = lineedit.BaseLineEdit(parent=self)
-        self._name_line.setPlaceholderText('Project Name')
-        project_line_layout.addWidget(dividers.get_horizontal_separator_widget())
-        project_line_layout.addWidget(self._name_line)
-        self._create_btn = buttons.BaseButton('Create', parent=self)
-        self._create_btn.setIcon(resources.icon('create'))
-        project_line_layout.addSpacing(10)
-        project_line_layout.addWidget(self._create_btn)
-
-        self.main_layout.addWidget(self._search_widget)
-        self.main_layout.addWidget(dividers.Divider('TEMPLATES', alignment=Qt.AlignCenter))
-        self.main_layout.addWidget(self._templates_list)
-        self.main_layout.addLayout(project_layout)
-
-    def setup_signals(self):
-        self._search_widget.textChanged.connect(self._on_search_template)
-        self._templates_list.selectedTemplate.connect(self._on_selected_template)
-        self._project_btn.directoryChanged.connect(self._on_directory_browsed)
-        self._create_btn.clicked.connect(self._on_create)
-
-    @property
-    def templates_list(self):
-        return self._templates_list
-
-    def set_settings(self, settings):
-        """
-        Set the settings used by this editor
-        This settings come from the main UI settings
-        :param settings: QtIniSettings
-        """
-
-        self._settings = settings
-        self._update_ui()
-
-    def _update_ui(self):
-        """
-        Update UI based on the stored settings if exists
-        """
-
-        if self._settings:
-            if self._settings.has_setting('project_directory'):
-                project_path = self._settings.get('project_directory')
-                self._project_line.setText(project_path)
-                self._project_btn.init_directory = project_path
-
-    def _on_search_template(self, template_text):
-        for template in self._templates_list.get_widgets():
-            template.setVisible(template_text.lower() in template.name.lower())
-
-    def _on_selected_template(self, template):
-        self._selected_template = template
-
-    def _on_directory_browsed(self, dir):
-        if not dir or not path.is_dir(dir):
-            return
-
-        self._project_line.setText(str(dir))
-
-    def _on_create(self):
-        project_path = self._project_line.text()
-        project_name = self._name_line.text()
-        if not project_path or not path.is_dir(project_path) or not project_name:
-            LOGGER.warning('Project Path: {} or Project Name: {} are not valid!'.format(project_path, project_name))
-            return
-        if self._selected_template is None:
-            LOGGER.warning('No Template selected, please select one first ...')
-            return
-
-        new_project = self._selected_template.create_project(project_name=project_name, project_path=project_path)
-        if new_project is not None:
-            LOGGER.debug(
-                'Project {} created successfully on path {}'.format(new_project.name, new_project.path))
-            self._name_line.setText('')
-            self.projectCreated.emit(new_project)
-            return new_project
-
-        return None
 
 
 class TemplateData(object):
 
-    PROJECT_CLASS = None
+    PROJECT_CLASS = Project
 
     def __init__(self, name='New Template'):
         self._name = name
@@ -862,8 +475,6 @@ class BlankTemplateData(TemplateData, object):
     def create_project(self, project_name, project_path):
         new_project = super(
             BlankTemplateData, self).create_project(project_name=project_name, project_path=project_path)
-        new_project.project_data.create_folder(consts.DATA_FOLDER)
-        new_project.project_data.create_folder(consts.CODE_FOLDER)
         return new_project
 
 
@@ -919,3 +530,410 @@ class TemplatesViewer(base.BaseWidget, object):
 
     def _on_template_selected(self, template):
         self.selectedTemplate.emit(template)
+
+
+class OpenProjectWidget(base.BaseWidget, object):
+    projectOpened = Signal(object)
+    projectsPathChanged = Signal(str)
+
+    def __init__(self, project_class, projects_path=None, parent=None):
+
+        self._project_class = project_class
+        self._projects_path = projects_path
+
+        super(OpenProjectWidget, self).__init__(parent=parent)
+
+        self._update_ui()
+
+    # =================================================================================================================
+    # OVERRIDES
+    # =================================================================================================================
+
+    def get_main_layout(self):
+        return layouts.VerticalLayout(spacing=0, margins=(0, 0, 0, 0))
+
+    def ui(self):
+        super(OpenProjectWidget, self).ui()
+
+        self._search_widget = search.SearchFindWidget()
+        self._search_widget.set_placeholder_text('Filter Projects ...')
+
+        self._projects_list = ProjectViewer(project_class=self._project_class)
+        self._projects_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        buttons_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        buttons_layout.setAlignment(Qt.AlignCenter)
+
+        buttons_layout1 = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        buttons_layout1.setAlignment(Qt.AlignLeft)
+        self._browse_widget = directory.SelectFolder(label_text='Projects Path', use_app_browser=True, use_icon=True)
+        buttons_layout1.addWidget(self._browse_widget)
+
+        buttons_layout.addLayout(buttons_layout1)
+
+        self.main_layout.addWidget(self._search_widget)
+        self.main_layout.addWidget(self._projects_list)
+        self.main_layout.addLayout(buttons_layout)
+
+    def setup_signals(self):
+        self._search_widget.textChanged.connect(self._on_search_project)
+        self._browse_widget.directoryChanged.connect(self._on_directory_browsed)
+        self._projects_list.projectOpened.connect(self.projectOpened.emit)
+
+    # =================================================================================================================
+    # BASE
+    # =================================================================================================================
+
+    def get_projects_list(self):
+        """
+        Returns projects list widget
+        :return: ProjectViewer
+        """
+
+        return self._projects_list
+
+    def set_projects_path(self, projects_path):
+        """
+        Sets the path where we want to search for projects
+        :param projects_path: str
+        """
+
+        self._projects_path = projects_path
+        # We set the projects path of the projects list after updating UI
+        self._projects_list.set_projects_path(self._projects_path)
+
+        self._update_ui()
+
+        self.projectsPathChanged.emit(self._projects_path)
+
+    def update_projects(self):
+        """
+        Updates all available projects
+        """
+
+        self._projects_list.update_projects()
+
+    def add_project(self, project_name):
+        self._projects_list.add_project(project_name)
+
+    # =================================================================================================================
+    # INTERNAL
+    # =================================================================================================================
+
+    def _update_ui(self):
+        """
+        Internal function that updates UI
+        """
+
+        if not self._projects_path or not os.path.isdir(self._projects_path):
+            return
+
+        self._browse_widget.set_directory(directory=self._projects_path)
+        self.update_projects()
+
+    # =================================================================================================================
+    # CALLBACKS
+    # =================================================================================================================
+
+    def _on_search_project(self, project_text):
+        """
+        Internal callback function that is called when the user types in the search projects filter
+        :param project_text: str
+        """
+
+        for project in self._projects_list.get_widgets():
+            project.setVisible(project_text.lower() in project.name.lower())
+
+    def _on_directory_browsed(self, projects_path):
+        """
+        Internal callback function that is triggered when the user browses a new projects path
+        :param projects_path: str
+        """
+
+        if not projects_path or not path.is_dir(projects_path):
+            return
+
+        self.set_projects_path(projects_path)
+        self._update_ui()
+
+
+class NewProjectWidget(base.BaseWidget, object):
+
+    TEMPLATES_VIEWER_CLASS = TemplatesViewer
+
+    projectCreated = Signal(str)
+
+    def __init__(self, project_class, projects_path=None, parent=None):
+
+        self._selected_template = None
+        self._project_class = project_class
+        self._projects_path = projects_path
+
+        super(NewProjectWidget, self).__init__(parent=parent)
+
+    def get_main_layout(self):
+        return layouts.VerticalLayout(spacing=0, margins=(0, 0, 0, 0))
+
+    def ui(self):
+        super(NewProjectWidget, self).ui()
+
+        self._search_widget = search.SearchFindWidget()
+        self._search_widget.set_placeholder_text('Filter Templates ...')
+
+        self._templates_list = self.TEMPLATES_VIEWER_CLASS(project_class=self._project_class)
+        self._templates_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        project_layout = layouts.HorizontalLayout(spacing=1, margins=(0, 0, 0, 0))
+
+        project_line_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        project_layout.addLayout(project_line_layout)
+        self._project_line = lineedit.BaseLineEdit(parent=self)
+        self._project_line.setPlaceholderText('Project Path')
+        self._project_line.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._project_btn = directory.SelectFolderButton(text='', use_app_browser=True)
+        project_line_layout.addWidget(self._project_line)
+        project_line_layout.addWidget(self._project_btn)
+        self._name_line = lineedit.BaseLineEdit(parent=self)
+        self._name_line.setPlaceholderText('Project Name')
+        project_line_layout.addWidget(dividers.get_horizontal_separator_widget())
+        project_line_layout.addWidget(self._name_line)
+        self._create_btn = buttons.BaseButton('Create', parent=self)
+        self._create_btn.setIcon(resources.icon('create'))
+        project_line_layout.addSpacing(10)
+        project_line_layout.addWidget(self._create_btn)
+
+        self.main_layout.addWidget(self._search_widget)
+        self.main_layout.addWidget(self._templates_list)
+        self.main_layout.addLayout(project_layout)
+
+    def setup_signals(self):
+        self._search_widget.textChanged.connect(self._on_search_template)
+        self._templates_list.selectedTemplate.connect(self._on_selected_template)
+        self._project_btn.directoryChanged.connect(self._on_directory_browsed)
+        self._create_btn.clicked.connect(self._on_create)
+
+    @property
+    def templates_list(self):
+        return self._templates_list
+
+    def set_projects_path(self, projects_path):
+        """
+        Set the path where projects are located
+        """
+
+        self._projects_path = projects_path
+        self._update_ui()
+
+    def _update_ui(self):
+        """
+        Update UI based on the stored settings if exists
+        """
+
+        if not self._projects_path or not os.path.isdir(self._projects_path):
+            return
+
+        self._project_line.setText(self._projects_path)
+        self._project_btn.init_directory = self._projects_path
+
+    def _on_search_template(self, template_text):
+        for template in self._templates_list.get_widgets():
+            template.setVisible(template_text.lower() in template.name.lower())
+
+    def _on_selected_template(self, template):
+        self._selected_template = template
+
+    def _on_directory_browsed(self, dir):
+        if not dir or not path.is_dir(dir):
+            return
+
+        self._project_line.setText(str(dir))
+
+    def _on_create(self):
+        project_path = self._project_line.text()
+        project_name = self._name_line.text()
+        if not project_path or not path.is_dir(project_path) or not project_name:
+            LOGGER.warning('Project Path: {} or Project Name: {} are not valid!'.format(project_path, project_name))
+            return
+        if self._selected_template is None:
+            LOGGER.warning('No Template selected, please select one first ...')
+            return
+
+        new_project = self._selected_template.create_project(project_name=project_name, project_path=project_path)
+        if new_project is not None:
+            LOGGER.debug(
+                'Project {} created successfully on path {}'.format(new_project.name, new_project.path))
+            self._name_line.setText('')
+            self.projectCreated.emit(new_project.name)
+            return new_project
+
+        return None
+
+
+class ProjectViewer(base.BaseWidget, object):
+    projectOpened = Signal(object)
+
+    def __init__(self, project_class, projects_path=None, parent=None):
+        self._project_class = project_class
+        self._projects_path = None
+        super(ProjectViewer, self).__init__(parent=parent)
+
+        self.set_projects_path(projects_path)
+
+    def get_main_layout(self):
+        main_layout = layouts.FlowLayout(parent=self, spacing_x=0, spacing_y=0)
+        return main_layout
+
+    def set_projects_path(self, projects_path):
+        """
+        Set the path where projects are located
+        :param projects_path: str
+        """
+
+        self._projects_path = projects_path
+        self.update_projects()
+
+    def add_project_widget(self, project_widget):
+        if project_widget is None:
+            return
+
+        project_widget.projectOpened.connect(self.projectOpened.emit)
+        project_widget.projectRemoved.connect(self._on_project_removed)
+
+        self.main_layout.addWidget(project_widget)
+
+    def get_widgets(self):
+        all_widgets = list()
+
+        for i in range(self.main_layout.count()):
+            widget_item = self.main_layout.itemAt(i)
+            if not widget_item:
+                continue
+            w = widget_item.widget()
+            all_widgets.append(w)
+
+        return all_widgets
+
+    def get_project_by_name(self, project_name):
+        for w in self.get_widgets():
+            if w.name == project_name:
+                return w
+
+        return None
+
+    def update_projects(self):
+
+        qtutils.clear_layout(self.main_layout)
+
+        if not self._projects_path or not os.path.isdir(self._projects_path):
+            return
+
+        projects_found = get_projects(self._projects_path, project_class=self._project_class)
+        for project_found in projects_found:
+            self.add_project_widget(project_found)
+
+    def add_project(self, project_name):
+        if not self._projects_path or not os.path.isdir(self._projects_path):
+            return
+
+        projects_found = get_projects(self._projects_path, project_class=self._project_class)
+        for project_found in projects_found:
+            if project_found.name == project_name:
+                self.add_project_widget(project_found)
+                break
+
+    def _on_project_removed(self, project_name):
+        project_widget = self.get_project_by_name(project_name)
+        if not project_widget:
+            return
+
+        project_widget.setParent(None)
+        project_widget.deleteLater()
+
+
+class ProjectWidget(base.BaseWidget, object):
+
+    PROJECT_CLASS = Project
+    OPEN_PROJECT_CLASS = OpenProjectWidget
+    NEW_PROJECT_CLASS = NewProjectWidget
+
+    projectOpened = Signal(object)
+    projectsPathChanged = Signal(str)
+
+    def __init__(self, projects_path=None, parent=None):
+
+        self._projects_path = None
+        self._history = None
+
+        super(ProjectWidget, self).__init__(parent=parent)
+
+        self.set_projects_path(projects_path)
+
+    # ============================================================================================================
+    # OVERRIDES
+    # ============================================================================================================
+
+    def get_main_layout(self):
+        return layouts.VerticalLayout(spacing=2, margins=(2, 2, 2, 2))
+
+    def ui(self):
+        super(ProjectWidget, self).ui()
+
+        self._tab_widget = tabs.BaseTabWidget(parent=self)
+        self._open_project = self.OPEN_PROJECT_CLASS(project_class=self.PROJECT_CLASS)
+        self._new_project = self.NEW_PROJECT_CLASS(project_class=self.PROJECT_CLASS)
+        self._tab_widget.addTab(self._open_project, 'Projects')
+        self._tab_widget.addTab(self._new_project, 'New Project')
+        self.main_layout.addWidget(self._tab_widget)
+
+    def setup_signals(self):
+        self._open_project.projectOpened.connect(self.projectOpened.emit)
+        self._open_project.projectsPathChanged.connect(self.projectsPathChanged.emit)
+        self._new_project.projectCreated.connect(self._on_project_created)
+
+    # ============================================================================================================
+    # BASE
+    # ============================================================================================================
+
+    def set_projects_path(self, projects_path):
+        """
+        Sets the path where we want to search for projects
+        :param projects_path: str
+        """
+
+        self._projects_path = projects_path
+        self._new_project.set_projects_path(projects_path)
+        self._open_project.set_projects_path(projects_path)
+
+    def get_project_by_name(self, project_name, force_update=True):
+        """
+        Returns project by its name
+        :param project_name: str
+        :param force_update: bool
+        :return: Project
+        """
+
+        if force_update:
+            self._open_project.get_projects_list().update_projects()
+
+        projects_list = self._open_project.get_projects_list()
+        return projects_list.get_project_by_name(project_name)
+
+    def open_project(self, project_name):
+        """
+        Opens project with given name
+        :param project_name: str
+        :return: Project
+        """
+
+        project_found = self.get_project_by_name(project_name)
+        if project_found:
+            project_found.open()
+            return project_found
+
+    # ============================================================================================================
+    # CALLBACKS
+    # ============================================================================================================
+
+    def _on_project_created(self, new_project):
+        self._tab_widget.setCurrentIndex(0)
+        self._open_project.add_project(new_project)
