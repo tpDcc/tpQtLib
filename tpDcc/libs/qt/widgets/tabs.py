@@ -29,7 +29,7 @@ class BaseTabWidget(QTabWidget, object):
         super(BaseTabWidget, self).__init__(parent=parent)
 
         self._set_custom_tab_bar()
-        self.tabCloseRequested.connect(self.removeTab)
+        self.tabCloseRequested.connect(self.close_tab)
 
         self._show_close_message = False
         self._show_text = ''
@@ -55,6 +55,15 @@ class BaseTabWidget(QTabWidget, object):
 
         super(BaseTabWidget, self).removeTab(index)
         self.deletedTab.emit(index)
+
+    def close_tab(self, index):
+        """
+        Function that is called before
+        :param index:
+        :return:
+        """
+
+        return self.removeTab(index)
 
     def set_close_message(self, message_text, message_title, cancel=False, accept_fn_call=None):
         self._show_close_message = True

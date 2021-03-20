@@ -345,18 +345,18 @@ class TitleFrame(QFrame, object):
 
         self.setMinimumHeight(24)
         # self.move(QPoint(24, 0))
-        self.setStyleSheet('border 1px solid rgb(41, 41, 41);')
+        # self.setStyleSheet('border 1px solid rgb(41, 41, 41);') CHANGED
 
         layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
         self.setLayout(layout)
 
         self._arrow = ExpandableArrow(collapsed=collapsed)
-        self._arrow.setStyleSheet('border:0px;')
+        # self._arrow.setStyleSheet('border:0px;') CHANGED
 
         self._title = label.BaseLabel(title, parent=self).strong()
         self._title.setMinimumHeight(24)
         # self._title.move(QPoint(24, 0))
-        self._title.setStyleSheet('border: 0px;')
+        # self._title.setStyleSheet('border: 0px;') CHANGED
 
         layout.addWidget(self._arrow)
         layout.addWidget(self._title)
@@ -531,24 +531,24 @@ class ExpanderItem(QGroupBox, object):
             header_rect_shadow = QRect(x - 1, y - 1, w + 1, header_height + 2)
             pen = QPen(self.palette().color(QPalette.Light))
             pen.setWidthF(0.4)
-            painter.setPen(pen)
+            # painter.setPen(pen)
+            painter.setPen(Qt.NoPen)
             painter.drawRect(header_rect)
             painter.fillRect(header_rect, QColor(255, 255, 255, 18))
             pen.setColor(self.palette().color(QPalette.Dark))
             painter.setPen(pen)
             painter.drawRect(header_rect_shadow)
             if not self.isCollapsed():
-                pen = QPen(self.palette().color(QPalette.Dark))
-                pen.setWidthF(0.8)
-                painter.setPen(pen)
-                offSet = header_height + 3
-                body_rect = QRect(x, y + offSet, w, h - offSet)
-                body_rect_shadow = QRect(x + 1, y + offSet, w + 1, h - offSet + 1)
+                # pen = QPen(self.palette().color(QPalette.Background))
+                # painter.setPen(pen)
+                offset = header_height + 3
+                body_rect = QRect(x, y + offset, w, h - offset)
+                # body_rect_shadow = QRect(x + 1, y + offSet, w + 1, h - offSet + 1)
                 painter.drawRect(body_rect)
-                pen.setColor(self.palette().color(QPalette.Light))
-                pen.setWidthF(0.4)
-                painter.setPen(pen)
-                painter.drawRect(body_rect_shadow)
+                # pen.setColor(self.palette().color(QPalette.Foreground))
+                # pen.setWidthF(0.4)
+                # painter.setPen(pen)
+                # painter.drawRect(body_rect_shadow)
         elif self._rolloutStyle == ExpanderStyles.Boxed:
             if self.isCollapsed():
                 arect = QRect(x + 1, y + 9, w - 1, 4)
@@ -693,7 +693,7 @@ class ExpanderWidget(QScrollArea, object):
     def __init__(self, parent=None):
         super(ExpanderWidget, self).__init__(parent=parent)
 
-        self._rolloutStyle = ExpanderStyles.Maya if dcc.is_maya() else ExpanderStyles.Square
+        self._rolloutStyle = ExpanderStyles.Maya if dcc.client().is_maya() else ExpanderStyles.Square
         self._dragDropMode = ExpanderDragDropModes.NoDragDrop
         self._scrolling = False
         self._scrollInitY = 0

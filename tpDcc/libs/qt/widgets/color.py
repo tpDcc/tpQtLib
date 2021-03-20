@@ -1289,7 +1289,6 @@ class ColorSelector(ColorPreview, object):
         self.set_update_mode(self.UpdateMode.CONTINUOUS)
         self._panel.set_widget(self._color_widget)
         self._panel.closed.connect(self._on_close_panel)
-        # self._panel.closeButtonClicked.connect(self._on_close_panel)
         self._connect_panel()
         self._panel.show()
 
@@ -1344,6 +1343,7 @@ class ColorSelector(ColorPreview, object):
             self._panel.close()
         finally:
             self._panel.blockSignals(False)
+        self.acceptedColor.emit(self.color())
         self._disconnect_panel()
 
     def _on_close_panel(self):
@@ -2038,6 +2038,8 @@ class ColorDialog(QDialog, object):
     def __init__(self, color_widget=None, parent=None):
         super(ColorDialog, self).__init__(parent)
 
+        self.setWindowTitle('Color Selector')
+
         self._button_mode = self.ButtonMode.OK_CANCEL
 
         main_layout = layouts.VerticalLayout(spacing=2, margins=(0, 0, 0, 0))
@@ -2046,6 +2048,7 @@ class ColorDialog(QDialog, object):
         self._color_widget = color_widget or ColorDialogWidget()
         self._color_widget.colorChanged.connect(self.colorChanged.emit)
         self._color_widget.colorSelected.connect(self.colorSelected.emit)
+        self._color_widget.enable_select_cancel_buttons(False)
 
         self._button_box = QDialogButtonBox()
         self._button_box.setStandardButtons(

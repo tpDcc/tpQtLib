@@ -154,7 +154,7 @@ class GroupBoxWidget(base.BaseFrame):
 
     toggled = Signal(bool)
 
-    def __init__(self, title, widget, persistent=False, settings=None, *args, **kwargs):
+    def __init__(self, title, widget=None, persistent=False, settings=None, *args, **kwargs):
 
         self._title = title
         self._widget = None

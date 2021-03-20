@@ -7,8 +7,6 @@ Module that contains custom Qt tree widgets
 
 from __future__ import print_function, division, absolute_import
 
-import string
-
 from Qt.QtCore import Qt, Signal, QRect, QSize, QModelIndex
 from Qt.QtWidgets import QApplication, QSizePolicy, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QStyleOption
 from Qt.QtWidgets import QWhatsThis
@@ -38,6 +36,7 @@ class TreeWidget(QTreeWidget, object):
         self._current_item = None
         self._last_item = None
         self._drop_indicator_rect = QRect()
+        self._drop_indicator_position = None
         self._name_filter = None
 
         self.setIndentation(25)
@@ -251,7 +250,7 @@ class TreeWidget(QTreeWidget, object):
 
         names.reverse()
 
-        item_path_str = string.join(names, '/')
+        item_path_str = '/'.join(names)
 
         return item_path_str
 
@@ -973,7 +972,7 @@ class FileTreeWidget(TreeWidget, object):
         if found:
             item = found
         else:
-            item = self.ITEM_WIDGET()
+            item = self.create_item_widget(file_name)
 
         # Constrain item size if necessary
         size = self.ITEM_WIDGET_SIZE
@@ -1081,6 +1080,14 @@ class FileTreeWidget(TreeWidget, object):
 
         path_str = self.get_tree_item_path_string(tree_item)
         return path.join_path(self._directory, path_str)
+
+    def create_item_widget(self, file_name):
+        """
+        Creates a new item widget
+        :return: variant
+        """
+
+        return self.ITEM_WIDGET()
 
     def create_item(self, name=None):
         """
@@ -1208,12 +1215,12 @@ class EditFileTreeWidget(base.DirectoryWidget, object):
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
-        self._tree_widget = self.TREE_WIDGET()
+        self._tree_widget = self.TREE_WIDGET(parent=self)
 
-        self._manager_widget = self.MANAGER_WIDGET()
+        self._manager_widget = self.MANAGER_WIDGET(parent=self)
         self._manager_widget.set_tree_widget(self._tree_widget)
 
-        self._filter_widget = self.FILTER_WIDGET()
+        self._filter_widget = self.FILTER_WIDGET(parent=self)
         self._filter_widget.set_tree_widget(self._tree_widget)
         self._filter_widget.set_directory(self._directory)
         drag_reorder_icon = resources.icon('drag_reorder')
@@ -1411,7 +1418,7 @@ class TreeWidgetItem(QTreeWidgetItem, object):
     def __init__(self, parent=None):
         self._widget = self._get_widget()
         if self._widget:
-            self._widget.item = self
+            self._widget.item_view = self
         self.column = self._get_column()
         super(TreeWidgetItem, self).__init__(parent)
 

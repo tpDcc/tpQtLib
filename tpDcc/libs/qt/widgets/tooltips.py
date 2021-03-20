@@ -63,7 +63,7 @@ class ExpandedTooltipPopup(dialog.BaseDialog, object):
         super(ExpandedTooltipPopup, self).ui()
 
         self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
 
         self._title_layout = layouts.HorizontalLayout(spacing=2, margins=(1, 1, 1, 1))

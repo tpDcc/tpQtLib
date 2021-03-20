@@ -81,7 +81,7 @@ class ThemePreferenceWidget(preferences.CategoryWidgetBase, object):
     def setup_signals(self):
         self._themes_combobox.currentIndexChanged.connect(self._on_current_theme_changed)
 
-    def init_defaults(self, settings):
+    def show_widget(self, settings):
         if not settings or not self._theme:
             return
 

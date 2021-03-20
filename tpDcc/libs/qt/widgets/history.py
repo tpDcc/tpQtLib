@@ -16,7 +16,7 @@ from tpDcc.libs.qt.core import base, qtutils
 from tpDcc.libs.qt.widgets import layouts, buttons, treewidgets
 
 
-class HistoryTreeWidget(treewidgets.FileTreeWidget, object):
+class HistoryTreeWidget(treewidgets.FileTreeWidget):
 
     HEADER_LABELS = ['Version', 'Comment', 'Size MB', 'User', 'Time']
 

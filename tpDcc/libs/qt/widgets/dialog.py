@@ -31,7 +31,9 @@ class BaseDialog(QDialog, abstract_dialog.AbstractDialog):
     """
 
     dialogResizedFinished = Signal()
-    dialogClosed = Signal()
+    closed = Signal()
+    themeUpdated = Signal(object)
+    styleReloaded = Signal(object)
 
     def __init__(self, **kwargs):
 
@@ -51,6 +53,7 @@ class BaseDialog(QDialog, abstract_dialog.AbstractDialog):
         self._has_title = kwargs.pop('has_title', False)
         self._size = kwargs.pop('size', (200, 125))
         self._title_pixmap = kwargs.pop('title_pixmap', None)
+        self._toolset = kwargs.get('toolset', None)
 
         self.setObjectName(str(name))
         self.setFocusPolicy(Qt.StrongFocus)
@@ -76,6 +79,9 @@ class BaseDialog(QDialog, abstract_dialog.AbstractDialog):
         if show_on_initialize:
             self.center()
             self.show()
+
+        if self._toolset:
+            self.main_layout.addWidget(self._toolset)
 
         self.resize(width, height)
 
@@ -312,15 +318,12 @@ class BaseDialog(QDialog, abstract_dialog.AbstractDialog):
         """
 
         current_theme = self.theme()
+        if not current_theme:
+            return
         current_theme.set_dpi(self.dpi())
         stylesheet = current_theme.stylesheet()
         self.setStyleSheet(stylesheet)
-
-        all_widgets = self.main_layout.findChildren(QObject)
-        for w in all_widgets:
-            if hasattr(w, 'setStyleSheet'):
-                w.setStyleSheet(stylesheet)
-                w.update()
+        self.styleReloaded.emit(current_theme)
 
     def setup_signals(self):
         pass
@@ -336,7 +339,7 @@ class BaseDialog(QDialog, abstract_dialog.AbstractDialog):
         return super(BaseDialog, self).resizeEvent(event)
 
     def closeEvent(self, event):
-        self.dialogClosed.emit()
+        self.closed.emit()
         event.accept()
 
     def setWindowIcon(self, icon):

@@ -839,6 +839,7 @@ class TextFieldWidget(FieldWidget, object):
         :param value: str
         """
 
+        print(value)
         self.widget().setText(value)
         super(TextFieldWidget, self).set_value(value)
 
@@ -918,7 +919,7 @@ class LabelFieldWidget(FieldWidget, object):
     def __init__(self, *args, **kwargs):
         super(LabelFieldWidget, self).__init__(*args, **kwargs)
 
-        widget = label.RightElidedLabel(self)
+        widget = label.RightElidedLabel(parent=self)
         widget.setAlignment(Qt.AlignVCenter)
         widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.set_widget(widget)
@@ -1400,6 +1401,7 @@ class ButtonGroupFieldWidget(FieldWidget, object):
                 button.setProperty('first', True)
             if index == len(items):
                 button.setProperty('last', True)
+            layout.addWidget(button)
 
         self.set_widget(widget)
 
@@ -1526,7 +1528,7 @@ class ObjectsFieldWidget(FieldWidget, object):
 
         self._value = list()
 
-        widget = label.RightElidedLabel(self)
+        widget = label.RightElidedLabel(parent=self)
         widget.setAlignment(Qt.AlignVCenter)
         widget.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.set_widget(widget)

@@ -254,6 +254,9 @@ class BaseNumberWidget(base.BaseWidget, object):
     def set_label_text(self, new_text):
         self._number_label.setText(new_text)
 
+    def setDecimals(self, value):
+        self._number_widget.setDecimals(value)
+
     def set_value_label(self, new_value):
         self._value_label.show()
         self._value_label.setText(str(new_value))
@@ -432,12 +435,86 @@ class DragDoubleSpinBoxLine(lineedit.BaseLineEdit, object):
         super(DragDoubleSpinBoxLine, self).setText(text)
         self.valueChanged.emit(self.value())
 
+    def setDecimals(self, value):
+        self._decimals = int(value)
+
     # NOTE: Here I'm breaking naming nomenclature on purpose. Doing this we follow nomenclature of Qt SpinBoxes
     def setValue(self, new_value):
         self.setText(str(new_value))
 
     def _setup_validator(self):
         self.setValidator(self.get_validator())
+
+
+class DoubleSpinBoxAxis(base.BaseWidget, object):
+
+    textChanged = Signal(str)
+    valueChanged = Signal(float)
+
+    def __init__(self, axis, start=0.0, max=10, min=-10, positive=False, parent=None):
+        self._axis = axis
+        self._start = start
+        self._max = max
+        self._min = min
+        if positive:
+            self._min = 0
+        super(DoubleSpinBoxAxis, self).__init__(parent=parent)
+
+    def get_main_layout(self):
+        main_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+
+        return main_layout
+
+    def ui(self):
+        super(DoubleSpinBoxAxis, self).ui()
+
+        axis_widget = QFrame(parent=self)
+        axis_widget.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
+        axis_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        axis_widget.setLayout(axis_layout)
+        self._axis_btn = buttons.get_axis_button(axis_type=self._axis, parent=self)
+        self._line = BaseDoubleSpinBox(parent=self)
+        self._line.setRange(self._min, self._max)
+        self._line.setValue(self._start)
+        axis_layout.addWidget(self._axis_btn)
+        axis_layout.addWidget(self._line)
+
+        self.main_layout.addWidget(axis_widget)
+
+    def setup_signals(self):
+        self._line.valueChanged.connect(self.valueChanged.emit)
+
+    def _get_value(self):
+        return self.value()
+
+    def _set_value(self, value):
+        with qt_contexts.block_signals(self, children=True):
+            self.setValue(value)
+
+    floatValue = Property(float, _get_value, _set_value)
+
+    def value(self):
+        return self._line.value()
+
+    def setValue(self, new_value):
+        self._line.setValue(new_value)
+
+    def setDecimals(self, value):
+        self._line.setDecimals(value)
+
+    def setRange(self, min_range, max_range):
+        self._min = min_range
+        self._max = max_range
+        self._line.setMinimum(min_range)
+        self._line.setMaximum(max_range)
+
+    def set_minimum(self, minimum_value):
+        self._min = minimum_value
+        self._line.setMinimum(self._min)
+
+    def set_maximum(self, maximum_value):
+        self._max = maximum_value
+        self._line.setMaximum(self._max)
 
 
 class DragDoubleSpinBoxLineAxis(base.BaseWidget, object):
@@ -497,6 +574,13 @@ class DragDoubleSpinBoxLineAxis(base.BaseWidget, object):
 
     def setValue(self, new_value):
         self._line.setValue(new_value)
+
+    def setDecimals(self, value):
+        self._line.setDecimals(value)
+
+    def setRange(self, min_range, max_range):
+        self._line.set_minimum(min_range)
+        self._line.set_maximum(max_range)
 
     def set_default(self, default):
         self._line.set_default(default)

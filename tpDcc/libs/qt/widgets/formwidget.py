@@ -16,7 +16,7 @@ from Qt.QtWidgets import QSizePolicy, QFrame, QSpacerItem
 from tpDcc.libs.qt.core import contexts as qt_contexts
 from tpDcc.libs.qt.widgets import layouts, label, buttons, formfields
 
-from tpDcc.libs.datalibrary.core import settings
+from tpDcc.tools.datalibrary.core import settings
 
 LOGGER = logging.getLogger('tpDcc-libs-qt')
 
@@ -257,6 +257,9 @@ class FormWidget(QFrame, object):
         """
 
         widget = self.widget(name)
+        if not widget:
+            return None
+
         return widget.value()
 
     def set_value(self, name, value):
@@ -391,6 +394,9 @@ class FormWidget(QFrame, object):
         """
 
         self._schema = self._sort_schema(schema)
+        if not self._schema:
+            return
+
         for field in schema:
             cls = formfields.FIELD_WIDGET_REGISTRY.get(field.get('type', 'label'))
             if not cls:
@@ -398,6 +404,9 @@ class FormWidget(QFrame, object):
                 continue
             if layout and not field.get('layout'):
                 field['layout'] = layout
+
+            enabled = field.get('enabled', True)
+            read_only = field.get('readOnly', False)
 
             error_visible = field.get('errorVisible')
             field['errorVisible'] = error_visible if error_visible is not None else errors_visible
@@ -412,6 +421,9 @@ class FormWidget(QFrame, object):
             default = field.get('default')
             if value is None and default is not None:
                 widget.set_value(default)
+
+            if not enabled or read_only:
+                widget.setEnabled(False)
 
             self._widgets.append(widget)
 
@@ -550,6 +562,9 @@ class FormWidget(QFrame, object):
             return field['order']
 
         order = 0
+
+        if not schema:
+            return
 
         for i, field in enumerate(schema):
             if field.get('type') == 'group':

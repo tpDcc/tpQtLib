@@ -18,6 +18,7 @@ class BaseProgressBar(QProgressBar, object):
     ERROR_STATUS = 'error'
     NORMAL_STATUS = 'primary'
     SUCCESS_STATUS = 'success'
+    WARNING_STATUS = 'warning'
 
     def __init__(self, parent=None):
         super(BaseProgressBar, self).__init__(parent)

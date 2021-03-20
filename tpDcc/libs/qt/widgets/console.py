@@ -14,6 +14,8 @@ from Qt.QtCore import Qt, QSize, QStringListModel
 from Qt.QtWidgets import QSizePolicy, QLineEdit, QTextEdit, QCompleter, QAction
 from Qt.QtGui import QFont, QTextCursor
 
+from tpDcc.libs.python import python
+
 
 class ConsoleInput(QLineEdit, object):
     def __init__(self, commands=[], parent=None):
@@ -68,7 +70,7 @@ class Console(QTextEdit, object):
 
         self.insertPlainText(msg + '\n')
         self.moveCursor(QTextCursor.End)
-        self._buffer.write(unicode(msg))
+        self._buffer.write(unicode(msg) if python.is_python2() else str(msg))
 
     def write_error(self, msg):
         """
@@ -80,7 +82,7 @@ class Console(QTextEdit, object):
         msg = 'ERROR: ' + msg
         self.insertHtml(msg_html)
         self.moveCursor(QTextCursor.End)
-        self._buffer.write(unicode(msg))
+        self._buffer.write(unicode(msg) if python.is_python2() else str(msg))
 
     def write_ok(self, msg):
         """
@@ -91,7 +93,7 @@ class Console(QTextEdit, object):
         msg_html = "<font color=\"Lime\"> " + msg + "\n</font><br>"
         self.insertHtml(msg_html)
         self.moveCursor(QTextCursor.End)
-        self._buffer.write(unicode(msg))
+        self._buffer.write(unicode(msg) if python.is_python2() else str(msg))
 
     def write_warning(self, msg):
         """
@@ -102,7 +104,7 @@ class Console(QTextEdit, object):
         msg_html = "<font color=\"Yellow\"> " + msg + "\n</font><br>"
         self.insertHtml(msg_html)
         self.moveCursor(QTextCursor.End)
-        self._buffer.write(unicode(msg))
+        self._buffer.write(unicode(msg) if python.is_python2() else str(msg))
 
     def flush(self):
         self.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)

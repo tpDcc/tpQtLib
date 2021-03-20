@@ -206,9 +206,7 @@ class MessageBox(QDialog, object):
     def __init__(self, name='messageBox', width=None, height=None, enable_input_edit=False,
                  enable_dont_show_checkbox=False, parent=None):
 
-        super(MessageBox, self).__init__(
-            parent=parent
-        )
+        super(MessageBox, self).__init__(parent=parent)
 
         self._frame = None
         self._animation = None
@@ -220,7 +218,7 @@ class MessageBox(QDialog, object):
         self.setMinimumHeight(height or self.MAX_HEIGHT)
         self.setObjectName(name)
         self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
         # self.setStyleSheet('background-color: rgb(68, 68, 68, 255);')
 
         parent = self.parent()
@@ -321,6 +319,10 @@ class MessageBox(QDialog, object):
         self.updateGeometry()
         self._fade_in()
 
+    def keyPressEvent(self, event):
+        if event.key() != Qt.Key_Escape:
+            super(MessageBox, self).keyPressEvent(event)
+
     def updateGeometry(self):
         """
         Overrides base QDialog updateGeometry function
@@ -402,6 +404,8 @@ class MessageBox(QDialog, object):
         """
 
         self._input_edit.setText(text)
+        if text:
+            self._input_edit.selectAll()
 
     def add_button(self, *args):
         """

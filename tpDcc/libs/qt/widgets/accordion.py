@@ -163,23 +163,23 @@ class AccordionItem(QGroupBox, object):
             painter.drawText(x + 33 if not self._icon else 40, y + 3, w, 16, Qt.AlignLeft | Qt.AlignTop, self.title())
             self._draw_triangle(painter, x, y)
             self._draw_icon(painter, x + 22, y + 3)
-            pen = QPen(self.palette().color(QPalette.Light))
-            pen.setWidthF(0.6)
-            painter.setPen(pen)
+            # pen = QPen(self.palette().color(QPalette.Light))
+            # pen.setWidthF(0.6)
+            # painter.setPen(pen)
             painter.drawRoundedRect(x + 1, y + 1, w - 1, h - 1, _rect, _rect)
-            pen.setColor(self.palette().color(QPalette.Shadow))
-            painter.setPen(pen)
+            # pen.setColor(self.palette().color(QPalette.Shadow))
+            # painter.setPen(pen)
             painter.drawRoundedRect(x, y, w - 1, h - 1, _rect, _rect)
         elif self.rollout_style == AccordionStyle.SQUARE:
             painter.drawText(x + 33 if not self._icon else 40, y + 3, w, 16, Qt.AlignLeft | Qt.AlignTop, self.title())
             self._draw_triangle(painter, x, y)
             self._draw_icon(painter, x + 22, y + 3)
-            pen = QPen(self.palette().color(QPalette.Light))
-            pen.setWidthF(0.3)
-            painter.setPen(pen)
-            painter.drawRect(x + 1, y + 1, w - 1, h - 1)
-            pen.setColor(self.palette().color(QPalette.Shadow))
-            painter.setPen(pen)
+            # pen = QPen(self.palette().color(QPalette.Light))
+            # pen.setWidthF(0.3)
+            # painter.setPen(pen)
+            # painter.drawRect(x + 1, y + 1, w - 1, h - 1)
+            # pen.setColor(self.palette().color(QPalette.Shadow))
+            # painter.setPen(pen)
         elif self.rollout_style == AccordionStyle.MAYA:
             painter.drawText(x + 33 if not self._icon else 40, y + 3, w, 16, Qt.AlignLeft | Qt.AlignTop, self.title())
             painter.setRenderHint(QPainter.Antialiasing, False)
@@ -190,24 +190,25 @@ class AccordionItem(QGroupBox, object):
             header_rect_shadow = QRect(x - 1, y - 1, w + 1, header_height + 2)
             pen = QPen(self.palette().color(QPalette.Light))
             pen.setWidthF(0.4)
-            painter.setPen(pen)
+            # painter.setPen(pen)
+            painter.setPen(Qt.NoPen)
             painter.drawRect(header_rect)
             painter.fillRect(header_rect, QColor(255, 255, 255, 18))
             pen.setColor(self.palette().color(QPalette.Dark))
             painter.setPen(pen)
             painter.drawRect(header_rect_shadow)
             if not self.is_collapsed():
-                pen = QPen(self.palette().color(QPalette.Dark))
-                pen.setWidthF(0.8)
-                painter.setPen(pen)
+                # pen = QPen(self.palette().color(QPalette.Dark))
+                # pen.setWidthF(0.8)
+                # painter.setPen(pen)
                 offset = header_height + 3
                 body_rect = QRect(x, y + offset, w, h - offset)
-                body_rect_shadow = QRect(x + 1, y + offset, w + 1, h - offset + 1)
+                # body_rect_shadow = QRect(x + 1, y + offset, w + 1, h - offset + 1)
                 painter.drawRect(body_rect)
-                pen.setColor(self.palette().color(QPalette.Light))
-                pen.setWidth(0.4)
-                painter.setPen(pen)
-                painter.drawRect(body_rect_shadow)
+                # pen.setColor(self.palette().color(QPalette.Light))
+                # pen.setWidth(0.4)
+                # painter.setPen(pen)
+                # painter.drawRect(body_rect_shadow)
         elif self.rollout_style == AccordionStyle.BOXED:
             if self.is_collapsed():
                 a_rect = QRect(x + 1, y + 9, w - 1, 4)
@@ -222,8 +223,8 @@ class AccordionItem(QGroupBox, object):
             pen.setWidthF(0.6)
             painter.setPen(pen)
             painter.drawRect(a_rect)
-            pen.setColor(self.palette().color(QPalette.Shadow))
-            painter.setPen(pen)
+            # pen.setColor(self.palette().color(QPalette.Shadow))
+            # painter.setPen(pen)
             painter.drawRect(b_rect)
             painter.setRenderHint(painter.Antialiasing, False)
             painter.setBrush(self.palette().color(QPalette.Window).darker(120))
@@ -295,7 +296,11 @@ class AccordionItem(QGroupBox, object):
             self._accordion_widget.emit_item_menu_requested(self)
 
     def _draw_triangle(self, painter, x, y):
-        brush = QBrush(QColor(255, 255, 255, 160), Qt.SolidPattern)
+
+        if self.rollout_style == AccordionStyle.MAYA:
+            brush = QBrush(QColor(255, 0, 0, 160), Qt.SolidPattern)
+        else:
+            brush = QBrush(QColor(255, 255, 255, 160), Qt.SolidPattern)
         if not self.is_collapsed():
             tl, tr, tp = QPoint(x + 9, y + 8), QPoint(x + 19, y + 8), QPoint(x + 14, y + 13.0)
             points = [tl, tr, tp]
@@ -305,9 +310,12 @@ class AccordionItem(QGroupBox, object):
             points = [tl, tr, tp]
             triangle = QPolygon(points)
 
+        current_pen = painter.pen()
         current_brush = painter.brush()
+        painter.setPen(Qt.NoPen)
         painter.setBrush(brush)
         painter.drawPolygon(triangle)
+        painter.setPen(current_pen)
         painter.setBrush(current_brush)
 
     def _draw_icon(self, painter, x, y):
@@ -327,7 +335,7 @@ class AccordionWidget(QScrollArea, object):
         super(AccordionWidget, self).__init__(parent=parent)
 
         self._rollout_style = AccordionStyle.SQUARE
-        if dcc.is_maya():
+        if dcc.client().is_maya():
             self._rollout_style = AccordionStyle.MAYA
         self._drag_drop_mode = AccordionDragDrop.NO_DRAG_DROP
         self._scrolling = False

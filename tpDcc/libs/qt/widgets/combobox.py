@@ -78,7 +78,7 @@ class BaseComboBox(QComboBox, object):
         """
 
         if widget is self.lineEdit():
-            if event.type() == QEvent.MouseButtonPress:
+            if event.type() == QEvent.MouseButtonPress and self.isEnabled():
                 self.showPopup()
         return super(BaseComboBox, self).eventFilter(widget, event)
 

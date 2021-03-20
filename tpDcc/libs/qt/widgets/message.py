@@ -104,21 +104,23 @@ class BaseMessage(base.BaseWidget, object):
     # =================================================================================================================
 
     def get_main_layout(self):
-        main_layout = layouts.HorizontalLayout(margins=(8, 8, 8, 8))
+        main_layout = layouts.HorizontalLayout(spacing=2, margins=(2, 2, 2, 2))
 
         return main_layout
 
     def ui(self):
         super(BaseMessage, self).ui()
 
-        current_theme = self.theme()
-
+        label_layout = layouts.VerticalLayout(spacing=0, margins=(0, 0, 0, 0))
         self._icon_label = avatar.Avatar()
-        self._icon_label.theme_size = current_theme.huge if current_theme else theme.Theme.Sizes.HUGE
+        self._icon_label.theme_size = self.theme_size
+        label_layout.addStretch()
+        label_layout.addWidget(self._icon_label)
+        label_layout.addStretch()
         self._content_label = label.BaseLabel().secondary()
         self._close_btn = buttons.BaseToolButton().image('close', theme='window').large().icon_only()
 
-        self.main_layout.addWidget(self._icon_label)
+        self.main_layout.addLayout(label_layout)
         self.main_layout.addWidget(self._content_label)
         self.main_layout.addStretch()
         self.main_layout.addWidget(self._close_btn)
@@ -215,6 +217,8 @@ class PopupMessage(base.BaseWidget, object):
 
         super(PopupMessage, self).__init__(parent=parent)
 
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
         close_timer = QTimer(self)
         close_timer.setSingleShot(True)
         close_timer.timeout.connect(self.close)
@@ -259,7 +263,7 @@ class PopupMessage(base.BaseWidget, object):
 
         self.setObjectName('message')
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WA_TranslucentBackground | Qt.WA_DeleteOnClose)
-        self.setAttribute(Qt.WA_StyledBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
 
         if self._theme_type == MessageTypes.LOADING:
             icon_label = loading.CircleLoading.tiny(parent=self)

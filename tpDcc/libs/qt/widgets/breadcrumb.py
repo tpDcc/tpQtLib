@@ -12,6 +12,7 @@ import os
 from Qt.QtWidgets import QSizePolicy, QButtonGroup, QFrame
 
 from tpDcc.libs.python import path, python
+from tpDcc.libs.resources.core import theme
 from tpDcc.libs.qt.core import mixin, base
 from tpDcc.libs.qt.widgets import layouts, buttons, label
 
@@ -30,7 +31,7 @@ class Breadcrumb(object):
         return self._label
 
 
-@mixin.theme_mixin
+@theme.mixin
 class BreadcrumbWidget(base.BaseWidget, object):
     """
     Widget that display current location withing a hierarchy

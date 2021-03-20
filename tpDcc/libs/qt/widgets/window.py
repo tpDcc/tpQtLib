@@ -16,9 +16,9 @@ from collections import defaultdict
 from Qt.QtCore import Qt, Signal, QByteArray, QSettings
 from Qt.QtWidgets import QApplication, QSizePolicy, QToolBar, QScrollArea, QMenuBar, QAction, QDockWidget
 from Qt.QtWidgets import QMainWindow, QWidget, QTabWidget, QTabBar
-from Qt.QtGui import QCursor
 
 from tpDcc import dcc
+from tpDcc.core import dcc as core_dcc
 from tpDcc.managers import resources
 from tpDcc.libs.python import path, folder
 from tpDcc.libs.resources.core import theme
@@ -86,6 +86,9 @@ class BaseWindow(QMainWindow, object):
         self.setWindowTitle(kwargs.get('title', self.WindowName))
         self.setWindowIcon(kwargs.get('icon', resources.icon('tpdcc')))
         # self.setFocusPolicy(Qt.ClickFocus)
+        if dcc.is_standalone():
+            self.setWindowFlags(Qt.WindowStaysOnTopHint)
+
         self.setMouseTracking(True)
 
         self.resize(self._init_width, self._init_height)
@@ -124,6 +127,8 @@ class BaseWindow(QMainWindow, object):
 
         super(BaseWindow, self).show()
         self.load_window_position()
+        self.activateWindow()
+        self.raise_()
 
         return self
 
@@ -297,7 +302,7 @@ class BaseWindow(QMainWindow, object):
         self._top_widget.setLayout(self._top_layout)
 
         # Status Bar
-        #
+
         # self.statusBar().showMessage('')
         # self.statusBar().setSizeGripEnabled(not self._fixed_size)
         # self._status_bar = self.STATUS_BAR_WIDGET(self)
@@ -609,7 +614,7 @@ class BaseWindow(QMainWindow, object):
         :return:  QToolBar
         """
 
-        new_toolbar = QToolBar(name)
+        new_toolbar = QToolBar(name, parent=self)
         self.addToolBar(area, new_toolbar)
 
         return new_toolbar
@@ -916,7 +921,7 @@ class MainWindow(BaseWindow, object):
         if type(callback_type) in [list, tuple]:
             callback_type = callback_type[0]
 
-        if callback_type not in tp.callbacks():
+        if callback_type not in core_dcc.callbacks():
             LOGGER.warning('Callback Type: "{}" is not valid! Aborting callback creation ...'.format(callback_type))
             return
 

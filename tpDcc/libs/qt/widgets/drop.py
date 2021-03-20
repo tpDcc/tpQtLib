@@ -275,7 +275,7 @@ class DropOverlayCross(QWidget, object):
 
         self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
         self.setWindowTitle('DropOverlayCross')
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setAttribute(Qt.WA_TranslucentBackground)
 
         self._grid = layouts.GridLayout(spacing=0, margins=(0, 0, 0, 0))
 
