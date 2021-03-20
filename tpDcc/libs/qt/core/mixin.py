@@ -35,32 +35,32 @@ def property_mixin(cls):
     return cls
 
 
-def cursor_mixin(cls):
-    """
-    Mixin decorator that changes cursor to Qt.PointingHandCursor when mouse is over an enabled widget and to
-    Qt.ForbiddenCursor when mouse is over a disabled widget
-    :param cls:
-    :return: cls
-    """
-
-    old_enter_event = cls.enterEvent
-    old_leave_event = cls.leaveEvent
-
-    def _new_enter_event(self, *args, **kwargs):
-        old_enter_event(self, *args, **kwargs)
-        # QApplication.setOverrideCursor(Qt.PointingHandCursor if self.isEnabled() else Qt.ForbiddenCursor)
-        return super(cls, self).enterEvent(*args, **kwargs)
-
-    def _new_leave_event(self, *args, **kwargs):
-        old_leave_event(self, *args, **kwargs)
-        # QApplication.restoreOverrideCursor()
-        return super(cls, self).leaveEvent(*args, **kwargs)
-
-    setattr(cls, 'enterEvent', _new_enter_event)
-    setattr(cls, 'leaveEvent', _new_leave_event)
-
-    return cls
-
+# def cursor_mixin(cls):
+#     """
+#     Mixin decorator that changes cursor to Qt.PointingHandCursor when mouse is over an enabled widget and to
+#     Qt.ForbiddenCursor when mouse is over a disabled widget
+#     :param cls:
+#     :return: cls
+#     """
+#
+#     old_enter_event = cls.enterEvent
+#     old_leave_event = cls.leaveEvent
+#
+#     def _new_enter_event(self, *args, **kwargs):
+#         old_enter_event(self, *args, **kwargs)
+#         # QApplication.setOverrideCursor(Qt.PointingHandCursor if self.isEnabled() else Qt.ForbiddenCursor)
+#         return super(cls, self).enterEvent(*args, **kwargs)
+#
+#     def _new_leave_event(self, *args, **kwargs):
+#         old_leave_event(self, *args, **kwargs)
+#         # QApplication.restoreOverrideCursor()
+#         return super(cls, self).leaveEvent(*args, **kwargs)
+#
+#     setattr(cls, 'enterEvent', _new_enter_event)
+#     setattr(cls, 'leaveEvent', _new_leave_event)
+#
+#     return cls
+#
 
 def focus_shadow_mixin(cls):
     """
