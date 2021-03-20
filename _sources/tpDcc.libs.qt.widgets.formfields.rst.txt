@@ -1,0 +1,7 @@
+tpDcc.libs.qt.widgets.formfields module
+=======================================
+
+.. automodule:: tpDcc.libs.qt.widgets.formfields
+   :members:
+   :undoc-members:
+   :show-inheritance:

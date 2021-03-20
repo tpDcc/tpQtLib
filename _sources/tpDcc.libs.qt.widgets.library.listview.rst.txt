@@ -1,7 +1,0 @@
-tpDcc.libs.qt.widgets.library.listview module
-=============================================
-
-.. automodule:: tpDcc.libs.qt.widgets.library.listview
-   :members:
-   :undoc-members:
-   :show-inheritance:

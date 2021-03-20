@@ -1,7 +1,0 @@
-tpDcc.libs.qt.widgets.options.color module
-==========================================
-
-.. automodule:: tpDcc.libs.qt.widgets.options.color
-   :members:
-   :undoc-members:
-   :show-inheritance:

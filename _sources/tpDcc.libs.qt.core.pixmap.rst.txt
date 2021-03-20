@@ -1,7 +1,0 @@
-tpDcc.libs.qt.core.pixmap module
-================================
-
-.. automodule:: tpDcc.libs.qt.core.pixmap
-   :members:
-   :undoc-members:
-   :show-inheritance:

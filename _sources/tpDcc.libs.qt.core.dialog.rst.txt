@@ -1,7 +1,0 @@
-tpDcc.libs.qt.core.dialog module
-================================
-
-.. automodule:: tpDcc.libs.qt.core.dialog
-   :members:
-   :undoc-members:
-   :show-inheritance:

@@ -1,7 +1,0 @@
-tpDcc.libs.qt.widgets.options.float module
-==========================================
-
-.. automodule:: tpDcc.libs.qt.widgets.options.float
-   :members:
-   :undoc-members:
-   :show-inheritance:

@@ -1,7 +1,0 @@
-tpDcc.libs.qt.widgets.library.savewidget module
-===============================================
-
-.. automodule:: tpDcc.libs.qt.widgets.library.savewidget
-   :members:
-   :undoc-members:
-   :show-inheritance:

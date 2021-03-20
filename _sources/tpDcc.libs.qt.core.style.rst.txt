@@ -1,7 +1,0 @@
-tpDcc.libs.qt.core.style module
-===============================
-
-.. automodule:: tpDcc.libs.qt.core.style
-   :members:
-   :undoc-members:
-   :show-inheritance:

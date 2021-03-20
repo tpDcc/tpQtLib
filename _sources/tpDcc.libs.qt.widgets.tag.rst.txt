@@ -1,0 +1,7 @@
+tpDcc.libs.qt.widgets.tag module
+================================
+
+.. automodule:: tpDcc.libs.qt.widgets.tag
+   :members:
+   :undoc-members:
+   :show-inheritance:

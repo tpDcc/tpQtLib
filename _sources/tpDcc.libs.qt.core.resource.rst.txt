@@ -1,7 +1,0 @@
-tpDcc.libs.qt.core.resource module
-==================================
-
-.. automodule:: tpDcc.libs.qt.core.resource
-   :members:
-   :undoc-members:
-   :show-inheritance:

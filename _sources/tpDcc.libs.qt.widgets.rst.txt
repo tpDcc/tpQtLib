@@ -1,15 +1,6 @@
 tpDcc.libs.qt.widgets package
 =============================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   tpDcc.libs.qt.widgets.library
-   tpDcc.libs.qt.widgets.options
-
 Submodules
 ----------
 
@@ -32,12 +23,15 @@ Submodules
    tpDcc.libs.qt.widgets.color
    tpDcc.libs.qt.widgets.combobox
    tpDcc.libs.qt.widgets.console
+   tpDcc.libs.qt.widgets.data
    tpDcc.libs.qt.widgets.datetime
+   tpDcc.libs.qt.widgets.dialog
    tpDcc.libs.qt.widgets.directory
    tpDcc.libs.qt.widgets.dividers
    tpDcc.libs.qt.widgets.dock
    tpDcc.libs.qt.widgets.drop
    tpDcc.libs.qt.widgets.expandables
+   tpDcc.libs.qt.widgets.formfields
    tpDcc.libs.qt.widgets.formwidget
    tpDcc.libs.qt.widgets.gif
    tpDcc.libs.qt.widgets.graphicseffects
@@ -49,6 +43,7 @@ Submodules
    tpDcc.libs.qt.widgets.grid
    tpDcc.libs.qt.widgets.group
    tpDcc.libs.qt.widgets.history
+   tpDcc.libs.qt.widgets.icon
    tpDcc.libs.qt.widgets.joystick
    tpDcc.libs.qt.widgets.label
    tpDcc.libs.qt.widgets.layouts
@@ -76,12 +71,15 @@ Submodules
    tpDcc.libs.qt.widgets.switch
    tpDcc.libs.qt.widgets.tabbars
    tpDcc.libs.qt.widgets.tabs
+   tpDcc.libs.qt.widgets.tag
+   tpDcc.libs.qt.widgets.theme
    tpDcc.libs.qt.widgets.toast
    tpDcc.libs.qt.widgets.toolbar
    tpDcc.libs.qt.widgets.toolset
    tpDcc.libs.qt.widgets.tooltips
    tpDcc.libs.qt.widgets.treewidgets
    tpDcc.libs.qt.widgets.views
+   tpDcc.libs.qt.widgets.window
 
 Module contents
 ---------------

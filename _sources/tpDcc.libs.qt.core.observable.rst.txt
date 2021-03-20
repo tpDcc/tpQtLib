@@ -1,0 +1,7 @@
+tpDcc.libs.qt.core.observable module
+====================================
+
+.. automodule:: tpDcc.libs.qt.core.observable
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -10,36 +10,27 @@ Submodules
    tpDcc.libs.qt.core.animation
    tpDcc.libs.qt.core.awesome
    tpDcc.libs.qt.core.base
-   tpDcc.libs.qt.core.cache
-   tpDcc.libs.qt.core.color
-   tpDcc.libs.qt.core.completer
    tpDcc.libs.qt.core.config
    tpDcc.libs.qt.core.consts
    tpDcc.libs.qt.core.contexts
    tpDcc.libs.qt.core.decorators
-   tpDcc.libs.qt.core.dialog
    tpDcc.libs.qt.core.dpi
    tpDcc.libs.qt.core.dragger
    tpDcc.libs.qt.core.formatters
-   tpDcc.libs.qt.core.icon
    tpDcc.libs.qt.core.image
    tpDcc.libs.qt.core.input
    tpDcc.libs.qt.core.menu
    tpDcc.libs.qt.core.mixin
-   tpDcc.libs.qt.core.pixmap
+   tpDcc.libs.qt.core.observable
    tpDcc.libs.qt.core.preferences
    tpDcc.libs.qt.core.qtutils
    tpDcc.libs.qt.core.resizers
-   tpDcc.libs.qt.core.resource
    tpDcc.libs.qt.core.settings
    tpDcc.libs.qt.core.statusbar
-   tpDcc.libs.qt.core.style
    tpDcc.libs.qt.core.svg
-   tpDcc.libs.qt.core.theme
    tpDcc.libs.qt.core.timers
    tpDcc.libs.qt.core.tool
    tpDcc.libs.qt.core.traymessage
-   tpDcc.libs.qt.core.window
    tpDcc.libs.qt.core.worker
 
 Module contents
