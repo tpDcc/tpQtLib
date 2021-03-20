@@ -476,7 +476,11 @@ def image_to_base64(image_path):
 
     if os.path.isfile(image_path):
         with open(image_path, 'rb') as image_file:
-            return base64.b64encode(image_file.read())
+            base64_data = base64.b64encode(image_file.read())
+            if python.is_python2():
+                return base64_data
+            else:
+                return base64_data.decode("utf-8")
 
 
 def base64_to_image(base64_string, image_format='PNG'):
