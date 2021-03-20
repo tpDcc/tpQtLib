@@ -14,7 +14,7 @@ from Qt.QtCore import QSettings, QPoint, QSize
 from Qt.QtWidgets import QMainWindow, QDockWidget, QComboBox, QCheckBox, QToolButton, QSpinBox, QLineEdit
 from Qt.QtWidgets import QDoubleSpinBox
 
-from tpDcc.libs.python import settings
+from tpDcc.libs.python import python, strings, settings
 
 
 class QtSettings(QSettings, object):
@@ -27,10 +27,10 @@ class QtSettings(QSettings, object):
             self._groups = [window.objectName(), 'RecentFiles']
         self._initialize()
 
-    def has_setting(self, setting_name):
-        return bool(self.get(setting_name))
+    def has_setting(self, setting_name, setting_group=None):
+        return bool(self.get(setting_name, setting_group=setting_group))
 
-    def get(self, setting_name, default_value=None, setting_group=None):
+    def get(self, setting_name, default_value=None, setting_group=None, begin_group=None):
         """
         Returns the setting stored with the given name
         :param setting_name: str
@@ -43,9 +43,22 @@ class QtSettings(QSettings, object):
         if setting_group:
             setting_name = '{}/{}'.format(setting_group, setting_name)
 
+        if begin_group:
+            self.beginGroup(begin_group)
+
         val = self.value(setting_name)
         if not val:
+            if begin_group:
+                self.endGroup()
             return default_value
+
+        if python.is_string(val) and val.lower() in ['true', 'false']:
+            if begin_group:
+                self.endGroup()
+            return strings.to_boolean(val)
+
+        if begin_group:
+            self.endGroup()
 
         return val
 
@@ -68,13 +81,16 @@ class QtSettings(QSettings, object):
 
         return val
 
-    def set(self, setting_name, setting_value):
+    def set(self, setting_name, setting_value, setting_group=None):
         """
         Stores a new settings with the given name and the given value
         If the given setting already exists, it will be overwrite
         :param setting_name: str, setting name we want store
         :param setting_value: variant, setting value we want to store
         """
+
+        if setting_group:
+            setting_name = '{}/{}'.format(setting_group, setting_name)
 
         self.setValue(setting_name, setting_value)
 

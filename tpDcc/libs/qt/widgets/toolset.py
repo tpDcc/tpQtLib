@@ -11,14 +11,17 @@ import os
 import logging
 import weakref
 import webbrowser
+from functools import partial
 
 from Qt.QtCore import Qt, Signal, QSize, QEvent
-from Qt.QtWidgets import QApplication, QSizePolicy, QMenu, QWidget, QFrame, QPlainTextEdit, QDialog
+from Qt.QtWidgets import QApplication, QSizePolicy, QWidget, QFrame, QPlainTextEdit, QDialog
+from Qt.QtWidgets import QMenu, QAction
 from Qt.QtGui import QCursor, QPixmap, QFont
 
 from tpDcc import dcc
-from tpDcc.managers import resources
-from tpDcc.libs.python import python, color
+from tpDcc.core import dcc as core_dcc
+from tpDcc.managers import configs, resources
+from tpDcc.libs.python import python, osplatform, process, color, win32
 from tpDcc.libs.qt.core import qtutils, base, preferences
 from tpDcc.libs.qt.widgets import layouts, label, stack, buttons, switch, gif, dividers, theme
 
@@ -46,6 +49,7 @@ class ToolsetWidget(stack.StackItem, object):
     ID = 'toolsetID'
     CONFIG = None
     EXTENSION = 'toolset'
+    ATTACHER_CLASS = None
 
     StartLargest = -1
     StartSmallest = 0
@@ -64,7 +68,7 @@ class ToolsetWidget(stack.StackItem, object):
     toolsetDeactivated = Signal()
     helpModeChanged = Signal(bool)
 
-    def __init__(self, tree_widget=None, icon_color=(255, 255, 255), widget_item=None, parent=None, *args, **kwargs):
+    def __init__(self, tree_widget=None, icon_color=(255, 255, 255), parent=None, *args, **kwargs):
 
         self._block_save = False
         self._show_warnings = True
@@ -84,9 +88,10 @@ class ToolsetWidget(stack.StackItem, object):
         self._client = None
         self._help_mode = False
         self._help_event = None
+        self._settings = kwargs.get('settings', None)
         self._dev = kwargs.get('dev', False)
-        self._supported_dccs = self.CONFIG.get('supported_dccs', dict()) if self.CONFIG else dict()
         self._properties = self._setup_properties()
+        self._dcc_actions = list()
         title = self.CONFIG.data.get('label', '') if self.CONFIG else ''
         collapsable = kwargs.get('collapsable', True)
         show_item_icon = kwargs.get('show_item_icon', True)
@@ -96,6 +101,7 @@ class ToolsetWidget(stack.StackItem, object):
             parent=parent or tree_widget, collapsable=collapsable, show_item_icon=show_item_icon,
             delete_button_enabled=True if tree_widget else False,
         )
+
 
     # =================================================================================================================
     # PROPERTIES
@@ -116,6 +122,10 @@ class ToolsetWidget(stack.StackItem, object):
         return self._dev
 
     @property
+    def settings(self):
+        return self._settings
+
+    @property
     def properties(self):
         return self._properties
 
@@ -125,7 +135,7 @@ class ToolsetWidget(stack.StackItem, object):
 
     @property
     def client(self):
-        return self._client
+        return self._client() if self._client else None
 
     # =================================================================================================================
     # TO OVERRIDE
@@ -138,14 +148,6 @@ class ToolsetWidget(stack.StackItem, object):
         """
 
         return list()
-
-    def setup_client(self):
-        """
-        Function that is called to setup the client of the application
-        Override in specific toolset widgets
-        """
-
-        return False
 
     def pre_content_setup(self):
         """
@@ -204,10 +206,20 @@ class ToolsetWidget(stack.StackItem, object):
 
         self._display_mode_button = DisplayModeButton(color=self._icon_color, size=16, parent=self)
         self._display_mode_button.setFixedSize(QSize(22, 22))
+        connect_widget = QWidget()
+        connect_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        connect_widget.setLayout(connect_layout)
         self._connect_button = buttons.BaseToolButton(parent=self).image('connect').icon_only()
+        self._connect_settings_button = buttons.BaseToolButton(parent=self).image('menu_dots').icon_only()
+        self._connect_settings_button.setPopupMode(self._connect_settings_button.InstantPopup)
+        self._connect_settings_button.setStyleSheet('QToolButton::menu-indicator{width:0px;}')
         self._connect_button.setFixedSize(QSize(22, 22))
         self._connect_button.setEnabled(False)
         self._connect_button.setToolTip('No connected to any DCC')
+        self._dcc_button = buttons.BaseToolButton(parent=self).icon_only()
+        connect_layout.addWidget(self._connect_button)
+        connect_layout.addWidget(self._connect_settings_button)
+        connect_layout.addWidget(self._dcc_button)
         self._manual_button = buttons.BaseMenuButton(parent=self)
         self._manual_button.set_icon(resources.icon('manual'))
         self._manual_button.setFixedSize(QSize(22, 22))
@@ -243,7 +255,7 @@ class ToolsetWidget(stack.StackItem, object):
         self._title_frame.horizontal_layout.insertWidget(display_button_pos - 1, self._help_switch)
         self._title_frame.horizontal_layout.insertWidget(display_button_pos - 1, self._help_button)
         self._title_frame.horizontal_layout.insertWidget(display_button_pos - 1, self._settings_button)
-        self._title_frame.horizontal_layout.insertWidget(0, self._connect_button)
+        self._title_frame.horizontal_layout.insertWidget(0, connect_widget)
         self._title_frame.horizontal_layout.insertWidget(display_button_pos, self._display_mode_button)
         self._title_frame.horizontal_layout.setSpacing(0)
         self._title_frame.horizontal_layout.setContentsMargins(0, 0, 0, 0)
@@ -256,6 +268,8 @@ class ToolsetWidget(stack.StackItem, object):
 
         if not dcc.is_standalone():
             self._connect_button.setVisible(False)
+            self._connect_settings_button.setVisible(False)
+            self._dcc_button.setVisible(False)
 
         self._stacked_widget.addWidget(empty_widget)
         self._stacked_widget.addWidget(self._widget_hider)
@@ -269,6 +283,7 @@ class ToolsetWidget(stack.StackItem, object):
 
         self._title_frame.mouseReleaseEvent = self._on_activate_event
 
+        self._connect_button.clicked.connect(self._on_focus_dcc)
         self._display_mode_button.clicked.connect(self.set_current_index)
         self._display_mode_button.clicked.connect(lambda: self.displaySwitched.emit())
         self.displaySwitched.connect(lambda: self.updateRequested.emit())
@@ -285,13 +300,28 @@ class ToolsetWidget(stack.StackItem, object):
     # BASE
     # =================================================================================================================
 
-    def initialize(self):
-        valid = self.setup_client()
-        if valid is False:
+    def initialize(self, client=None):
+
+        if client:
+            client.dccDisconnected.connect(self._on_dcc_disconnected)
+            status = client.get_status_level()
+            status_message = client.get_status_message()
+            self._reset_connect_button(status_message, status)
+            self._client = weakref.ref(client)
+            self._connect_button.setVisible(True)
+
+        if not client or not dcc.is_standalone():
             self._connect_button.setVisible(False)
+            self._connect_settings_button.setVisible(False)
+            self._dcc_button.setVisible(False)
+        else:
+            self._setup_connect_settings_menu()
+            self._refresh_dcc_actions()
+            self._refresh_connect_settings_menu()
+            self._refresh_dcc_button()
 
         self.pre_content_setup()
-        toolset_contents = self.contents()
+        toolset_contents = self.contents() or list()
         for toolset_widget in toolset_contents:
             self.add_stacked_widget(toolset_widget)
         self._stacked_widget.setCurrentIndex(1) if self.count() > 0 else self._stacked_widget.setCurrentIndex(0)
@@ -308,14 +338,15 @@ class ToolsetWidget(stack.StackItem, object):
 
         self._attacher = weakref.ref(attacher)
 
-        # Setup standard settings and attacher preferences
-        self._preferences_widget.set_settings(self.attacher.settings())
-        self._theme_prefs_widget = theme.ThemePreferenceWidget(
-            theme=self.attacher.theme(), parent=self._preferences_widget)
-        self._preferences_widget.add_category(self._theme_prefs_widget.CATEGORY, self._theme_prefs_widget)
+        if hasattr(self.attacher, 'settings'):
+            # Setup standard settings and attacher preferences
+            self._preferences_widget.set_settings(self.attacher.settings())
+            self._theme_prefs_widget = theme.ThemePreferenceWidget(
+                theme=self.attacher.theme(), parent=self._preferences_widget)
+            self._preferences_widget.add_category(self._theme_prefs_widget.CATEGORY, self._theme_prefs_widget)
+            # self.setup_attacher_settings(attacher)
 
-        # self.setup_attacher_settings(attacher)
-
+        self.attacher.closed.connect(self._on_attacher_closed)
         self.attacher.themeUpdated.connect(self.reload_theme)
         self.attacher.styleReloaded.connect(self.reload_theme)
 
@@ -625,93 +656,82 @@ class ToolsetWidget(stack.StackItem, object):
 
         if severity == 'warning':
             LOGGER.warning(text)
-            self._connect_button.setStyleSheet('background-color: #bc3030')
+            self._connect_button.setStyleSheet('background-color: #e4c019')
         elif severity == 'error':
             LOGGER.error(text)
-            self._connect_button.setStyleSheet('background-color: #e4c019')
+            self._connect_button.setStyleSheet('background-color: #bc3030')
         else:
             LOGGER.info(text)
             self._connect_button.setStyleSheet('')
+            self._connect_button.setEnabled(True)
 
-    def _update_client(self):
-        if not self._client:
+    def _setup_connect_settings_menu(self):
+        self._connect_settings_menu = QMenu(self)
+        self._refresh_action = QAction(resources.icon('refresh'), 'Refresh', self)
+        self._connect_settings_menu.addAction(self._refresh_action)
+        self._connect_settings_menu.addSeparator()
+
+        self._refresh_action.triggered.connect(self._on_refresh_client)
+
+        self._connect_settings_button.setMenu(self._connect_settings_menu)
+
+    def _refresh_dcc_actions(self):
+        for action in self._dcc_actions:
+            self._dcc_actions.remove(action)
+            self._connect_settings_menu.removeAction(action)
+
+        config_dict = configs.get_tool_config(self.ID) or dict() if self.ID else dict()
+        supported_dccs = config_dict.get('supported_dccs', dict()) if config_dict else dict()
+        if not supported_dccs:
             return
 
-        valid_connect = self._client.connect()
-        if not valid_connect:
-            self._reset_connect_button()
-            self._register_client(self._client)
-            return False
+        for dcc_name, nice_name in core_dcc.Dccs.nice_names.items():
+            if dcc_name not in supported_dccs:
+                continue
+            process_name = core_dcc.Dccs.executables.get(dcc_name, dict()).get(osplatform.get_platform(), None)
+            if not process_name:
+                continue
+            process_running = process.check_if_process_is_running(process_name)
+            if not process_running:
+                continue
+            dcc_icon = resources.icon(dcc_name)
+            dcc_action = QAction(dcc_icon, nice_name, self)
+            dcc_action.triggered.connect(partial(self._on_dcc_selected, dcc_name))
+            self._connect_settings_menu.addAction(dcc_action)
+            self._dcc_actions.append(dcc_action)
 
-        if dcc.is_standalone():
+    def _refresh_connect_settings_menu(self):
+        self._refresh_action.setVisible(not self.client.connected)
 
-            success, dcc_exe = self._client.update_paths()
-            if not success:
-                self._reset_connect_button('Error while connecting to Dcc: update paths ...', severity='error')
-                return False
+        if not self.client.connected:
+            self._connect_settings_button.setVisible(True)
+        else:
+            if len(self._dcc_actions) > 1:
+                self._connect_settings_button.setVisible(True)
+            else:
+                self._connect_settings_button.setVisible(False)
 
-            success = self._client.update_dcc_paths(dcc_exe)
-            if not success:
-                self._reset_connect_button('Error while connecting to Dcc: update dcc paths ...', severity='error')
-                return False
+    def _refresh_dcc_button(self):
+        self._dcc_button.setVisible(self.client.connected)
 
-            success = self._client.init_dcc()
-            if not success:
-                self._reset_connect_button('Error while connecting to Dcc: init dcc ...', severity='error')
-                return False
-
-        dcc_name, dcc_version = self._client.get_dcc_info()
-        if not dcc_name or not dcc_version:
-            self._reset_connect_button(
-                'Error while connecting to Dcc: get dcc info ... ({}, {})'.format(dcc_name, dcc_version),
-                severity='error')
-            return False
-
-        if dcc_name not in self._supported_dccs:
-            self._reset_connect_button(
-                'Connected DCC {} ({}) is not supported!'.format(dcc_name, dcc_version), severity='warning')
-            return False
-
-        supported_versions = self._supported_dccs[dcc_name]
-        if dcc_version not in supported_versions:
-            self._reset_connect_button(
-                'Connected DCC {} is supported but version {} is not!'.format(dcc_name, dcc_version),
-                severity='warning')
-            return False
-
-        self._connect_button.setEnabled(True)
-        msg = 'Connected to: {} ({})'.format(dcc_name, dcc_version)
-        self._connect_button.setToolTip(msg)
-        LOGGER.info(msg)
-
-        if not dcc.is_standalone():
-            self._connect_button.setVisible(False)
-
-        self._register_client(self._client)
-
-        return True
-
-    def _register_client(self, client):
-        """
-        Internal function that registers given client in global Dcc clients variable
-        :param client: DccClient
-        """
-
-        if not client:
-            return
-        client_found = False
-        current_clients = dcc._CLIENTS
-        for current_client in list(current_clients.values()):
-            if client == current_client():
-                client_found = True
-                break
-        if client_found:
-            return
-        dcc._CLIENTS[self.ID] = weakref.ref(client)
+        if self.client.connected:
+            dcc_icon = resources.icon(self.client.get_name())
+            if dcc_icon.isNull():
+                dcc_icon = resources.icon('tpDcc')
+            self._dcc_button.setIcon(dcc_icon)
+            self._dcc_button.setToolTip('{} - {}'.format(self.client.get_name(), self.client.get_version()))
 
     # =================================================================================================================
     # CALLBACKS
     # =================================================================================================================
+
+    def _on_attacher_closed(self):
+        """
+        Internal callback function that is called before attacher is closed
+        Useful to do custom things before closing a tool
+        """
+
+        pass
 
     def _on_activate_event(self, event, emit=True):
         self._on_toggle_contents(emit=emit)
@@ -772,6 +792,47 @@ class ToolsetWidget(stack.StackItem, object):
     def _on_dcc_disconnected(self):
         self._connect_button.setEnabled(False)
         self._connect_button.setToolTip('No connected to any DCC')
+
+    def _on_focus_dcc(self):
+        if not self.client:
+            return
+
+        _, _, dcc_pid = self.client.get_dcc_info()
+        if not dcc_pid:
+            return
+
+        win32.focus_window_from_pid(dcc_pid)
+        win32.focus_window_from_pid(os.getpid(), restore=False)
+
+    def _on_refresh_client(self):
+        self.client.connect()
+        self.client.update_client(tool_id=self.ID)
+        status = self.client.get_status_level()
+        status_message = self.client.get_status_message()
+        self._reset_connect_button(status_message, status)
+        self._refresh_connect_settings_menu()
+        self._refresh_dcc_button()
+
+    def _on_dcc_selected(self, dcc_name):
+        old_port = self.client._port
+        dcc_port = core_dcc.dcc_port(self.client.PORT, dcc_name=dcc_name)
+        if old_port == dcc_port:
+            return
+
+        try:
+            self.client.disconnect()
+        except Exception:
+            pass
+        valid = self.client.connect(dcc_port)
+        if not valid:
+            self.client.connect(old_port)
+
+        self.client.update_client(tool_id=self.ID)
+        status = self.client.get_status_level()
+        status_message = self.client.get_status_message()
+        self._reset_connect_button(status_message, status)
+        self._refresh_connect_settings_menu()
+        self._refresh_dcc_button()
 
 
 class ToolsetDisplays(object):
@@ -954,7 +1015,6 @@ class ToolsetHelpEvent(base.BaseWidget, object):
         return self._current_tooltip
 
     def eventFilter(self, obj, event):
-
         if event.type() == QEvent.Leave:
             if obj == self._current_widget:
                 if self._temp_tooltip is not None:
@@ -994,7 +1054,7 @@ class ToolsetTooltipHelpDialog(QDialog, object):
         self._layout.addWidget(self._tooltip_widget)
         self.setLayout(self._layout)
         self._tooltip_data = None
-        self.setStyleSheet('QDialog{background: rgb(60, 70, 75);}')
+        # self.setStyleSheet('QDialog{background: rgb(60, 70, 75);}') CHANGED
 
     def update_tooltip(self, tooltip_data):
         self._tooltip_data = tooltip_data

@@ -5,12 +5,17 @@
 Module that contains implementation for DCC toolsets
 """
 
+from __future__ import print_function, division, absolute_import
+
 import os
+import re
 import logging
 from collections import OrderedDict
 
-from tpDcc.managers import plugins, tools
-from tpDcc.libs.python import python, decorators, folder, yamlio, color
+from tpDcc.managers import configs
+from tpDcc.libs.python import python, color, decorators, plugin, folder, yamlio
+
+from tpDcc.libs.qt.core import consts
 from tpDcc.libs.qt.widgets import toolset
 
 if python.is_python2():
@@ -18,25 +23,34 @@ if python.is_python2():
 else:
     import importlib as loader
 
-LOGGER = logging.getLogger('tpDcc-libs-qt')
+logger = logging.getLogger(consts.LIB_ID)
 
 
 @decorators.add_metaclass(decorators.Singleton)
-class ToolsetsManager(object):
-    def __init__(self,):
-        super(ToolsetsManager, self).__init__()
+class ToolsetsManager(plugin.PluginFactory):
+
+    REGEX_FOLDER_VALIDATOR = re.compile('^((?!__pycache__)(?!dccs).)*$')
+
+    def __init__(self):
+        super(ToolsetsManager, self).__init__(interface=toolset.ToolsetWidget)
 
         self._toolsets = dict()
         self._toolset_groups = dict()
-        self._registered_paths = dict()
+        self._registered_file_paths = dict()
 
-        self._manager = plugins.PluginsManager(interface=toolset.ToolsetWidget)
+    # ============================================================================================================
+    # PROPERTIES
+    # ============================================================================================================
 
     @property
     def toolset_groups(self):
         return self._toolset_groups
 
-    def register_path(self, package_name, path_to_register):
+    # ============================================================================================================
+    # TOOLSETS
+    # ============================================================================================================
+
+    def register_toolset_file_path(self, path_to_register, package_name=None):
         """
         Register path to find toolsets from
         :return: str
@@ -44,35 +58,27 @@ class ToolsetsManager(object):
 
         if not path_to_register or not os.path.isdir(path_to_register):
             return None
+        if package_name not in self._registered_file_paths:
+            self._registered_file_paths[package_name] = list()
+        if path_to_register not in self._registered_file_paths[package_name]:
+            self._registered_file_paths[package_name].append(path_to_register)
 
-        if package_name not in self._registered_paths:
-            self._registered_paths[package_name] = list()
-
-        if path_to_register not in self._registered_paths[package_name]:
-            self._registered_paths[package_name].append(path_to_register)
-
-    # ============================================================================================================
-    # TOOLSETS
-    # ============================================================================================================
-
-    def load_registered_toolsets(self, package_name, tools_to_load, tools_manager=None):
+    def load_registered_toolsets(self, package_name, tools_to_load):
         self._load_registered_paths_toolsets(package_name=package_name)
         self._load_package_toolsets(
             package_name=package_name, tools_to_load=tools_to_load)
 
-        tools_mgr = tools_manager or tools.ToolsManager
-
         if package_name not in self._toolsets:
             self._toolsets[package_name] = list()
-        toolset_data = self._manager.get_plugins(package_name)
+        toolset_data = self.plugins(package_name)
         if not toolset_data:
             return True
 
-        for tool_set in toolset_data.values():
+        for tool_set in toolset_data:
             if tool_set.ID not in self._toolsets[package_name]:
-                toolset_config = tools_mgr().get_tool_config(tool_set.ID, package_name=package_name)
+                toolset_config = configs.get_tool_config(tool_set.ID, package_name=package_name)
                 if not toolset_config:
-                    LOGGER.warning(
+                    logger.warning(
                         'No valid configuration file found for toolset: "{}" in package: "{}"'.format(
                             tool_set.ID, package_name))
                     continue
@@ -95,7 +101,7 @@ class ToolsetsManager(object):
 
         package_toolsets = self._toolsets.get(package_name)
         if not package_toolsets:
-            LOGGER.warning('No toolsets found in package: {}!'.format(package_name))
+            logger.warning('No toolsets found in package: {}!'.format(package_name))
             return None
 
         toolset_found = None
@@ -105,7 +111,7 @@ class ToolsetsManager(object):
                 break
 
         if not toolset_found:
-            LOGGER.warning('Toolset "{}" not found in package: "{}".'.format(toolset_id, package_name))
+            logger.warning('Toolset "{}" not found in package: "{}".'.format(toolset_id, package_name))
             return None
 
         if as_dict:
@@ -206,7 +212,7 @@ class ToolsetsManager(object):
                         hue_shift = toolset_group['hue_shift'] * (index + 1)
                         return tuple(color.hue_shift(group_color, hue_shift))
         else:
-            LOGGER.warning(
+            logger.warning(
                 'ToolSet "{}" not found in any toolset group. Impossible to retrieve color!'.format(toolset_id))
             return 255, 255, 255
 
@@ -233,7 +239,7 @@ class ToolsetsManager(object):
                             continue
                     toolset_menus.append(toolset_group.get('menu', list()))
         else:
-            LOGGER.warning(
+            logger.warning(
                 'Toolset "{}" not found in any toolset group. Impossible to retrieve menu data!'.format(toolset_type))
 
         return toolset_menus
@@ -310,11 +316,11 @@ class ToolsetsManager(object):
         Loads all toolsets found in registered paths
         """
 
-        if not self._registered_paths:
+        if not self._registered_file_paths:
             return
 
         # Load toolsets data
-        for pkg_name, registered_paths in self._registered_paths.items():
+        for pkg_name, registered_paths in self._registered_file_paths.items():
             if package_name != pkg_name:
                 continue
             for registered_path in registered_paths:
@@ -325,7 +331,7 @@ class ToolsetsManager(object):
                     try:
                         toolset_data = yamlio.read_file(pth, maintain_order=True)
                     except Exception:
-                        LOGGER.warning('Impossible to read toolset data from: "{}!'.format(pth))
+                        logger.warning('Impossible to read toolset data from: "{}!'.format(pth))
                         continue
                     if pkg_name not in self._toolset_groups:
                         self._toolset_groups[pkg_name] = list()
@@ -342,10 +348,10 @@ class ToolsetsManager(object):
                         self._toolset_groups[pkg_name].append(toolset_data)
 
         # Load toolsets widgets
-        for pkg_name, registered_paths in self._registered_paths.items():
+        for pkg_name, registered_paths in self._registered_file_paths.items():
             if package_name != pkg_name:
                 continue
-            self._manager.register_paths(registered_paths, package_name=pkg_name)
+            self.register_paths(registered_paths, package_name=pkg_name)
 
     def _load_package_toolsets(self, package_name, tools_to_load):
         """
@@ -366,7 +372,7 @@ class ToolsetsManager(object):
             pkg_path = tools_path.format(package_name, tool_name)
             pkg_loader = loader.find_loader(pkg_path)
             if not pkg_loader:
-                LOGGER.debug('No loader found for "{}"'.format(tool_name))
+                logger.debug('No loader found for "{}"'.format(tool_name))
                 continue
             if tool_name not in paths_to_register:
                 paths_to_register[tool_name] = list()
@@ -377,4 +383,4 @@ class ToolsetsManager(object):
 
         # Find where toolset widgets are located
         if tools_paths_to_load:
-            self._manager.register_paths(tools_paths_to_load, package_name=package_name)
+            self.register_paths(tools_paths_to_load, package_name=package_name)

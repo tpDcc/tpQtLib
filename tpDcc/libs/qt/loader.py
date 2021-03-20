@@ -14,8 +14,6 @@ import logging
 
 from Qt.QtWidgets import QApplication
 
-from tpDcc.managers import resources
-
 # =================================================================================
 
 PACKAGE = 'tpDcc.libs.qt'
