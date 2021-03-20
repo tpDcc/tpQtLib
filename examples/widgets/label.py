@@ -40,8 +40,7 @@ class LabelExample(tpDcc.Window, mixin.FieldMixin):
         mix_lyt.addWidget(label.BaseLabel('Label: H4 & Mark').h4().mark())
 
         elide_lyt = layouts.VerticalLayout()
-        label_none = label.BaseLabel('This is a elide NONE mode label. '
-                            'Ellipsis should NOT appear in the text.')
+        label_none = label.BaseLabel('This is a elide NONE mode label. Ellipsis should NOT appear in the text.')
         label_left = label.BaseLabel(
             'This is a elide LEFT mode label. '
             'The ellipsis should appear at the beginning of the text. '

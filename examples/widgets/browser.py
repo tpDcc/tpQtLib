@@ -70,5 +70,6 @@ class BrowserExample(tpDcc.Window, mixin.FieldMixin):
         self.main_layout.addWidget(lbl8)
         self.main_layout.addStretch()
 
+
 def run():
     return BrowserExample()

@@ -613,5 +613,3 @@ class FormWidget(QFrame, object):
         """
 
         self.validate(widget=widget)
-
-

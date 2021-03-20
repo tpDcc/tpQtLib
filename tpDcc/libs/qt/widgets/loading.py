@@ -24,7 +24,7 @@ class CircleLoading(base.BaseWidget, object):
         self.setFixedSize(QSize(size, size))
 
         self._rotation = 0
-        self._loading_pixmap =resources.pixmap(
+        self._loading_pixmap = resources.pixmap(
             'loading', extension='svg', color=color or self.accent_color()).scaledToWidth(size, Qt.SmoothTransformation)
         self._loading_anim = QPropertyAnimation()
         self._loading_anim.setTargetObject(self)

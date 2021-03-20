@@ -259,4 +259,3 @@ class IconPickerAction(QWidgetAction):
                     self.parent().close()
             except Exception:
                 pass
-

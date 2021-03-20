@@ -15,7 +15,7 @@ class Tag(QLabel, object):
     closed = Signal()
     clicked = Signal()
 
-    def __init__(self, text='',  parent=None):
+    def __init__(self, text='', parent=None):
         super(Tag, self).__init__(text=text, parent=parent)
 
         self._is_pressed = False

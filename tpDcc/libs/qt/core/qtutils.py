@@ -65,6 +65,7 @@ INT_RANGE_MIN = -mathlib.MAX_INT
 INT_RANGE_MAX = mathlib.MAX_INT
 CURRENT_DIR = os.path.expanduser('~')
 
+
 # ==============================================================================
 
 def is_pyqt():
@@ -178,6 +179,7 @@ def unwrapinstance(object):
         return long(shiboken.getCppPointer(object)[0])
     else:
         return int(shiboken.getCppPointer(object)[0])
+
 
 @contextlib.contextmanager
 def app():
@@ -1128,7 +1130,6 @@ def get_window_menu_bar(window=None):
     :param window: QMainWindow
     :return: QMenuBar or None
     """
-
 
     window = window or dcc.get_main_window()
     if not window:

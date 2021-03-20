@@ -767,8 +767,8 @@ class StringDoubleFieldWidget(FieldWidget, object):
         :param value: str
         """
 
-        self._widget1.setText(str( value[0]))
-        self._widget2.setText(str( value[1]))
+        self._widget1.setText(str(value[0]))
+        self._widget2.setText(str(value[1]))
 
         super(StringDoubleFieldWidget, self).set_value(value)
 
@@ -781,7 +781,6 @@ class PasswordFieldWidget(FieldWidget, object):
         widget.setEchoMode(lineedit.BaseLineEdit.EchoMode.Password)
         widget.textChanged.connect(self._on_emit_value_changed)
         self.set_widget(widget)
-
 
     # =================================================================================================================
     # OVERRIDES
@@ -1018,7 +1017,7 @@ class ImageFieldWidget(FieldWidget, object):
 
 class RadioFieldWidget(FieldWidget, object):
     def __init__(self, *args, **kwargs):
-        super(RadioFieldWidget ,self).__init__(*args, **kwargs)
+        super(RadioFieldWidget, self).__init__(*args, **kwargs)
 
         self._radio_buttons = list()
 

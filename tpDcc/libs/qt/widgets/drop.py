@@ -14,6 +14,7 @@ from Qt.QtGui import QCursor, QPixmap, QColor, QPalette, QPainter, QBrush, QLine
 from tpDcc.libs.qt.core import qtutils
 from tpDcc.libs.qt.widgets import layouts
 
+
 class DropArea(object):
     InvalidDropArea = 0
     TopDropArea = 1

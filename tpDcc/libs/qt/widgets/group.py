@@ -490,5 +490,3 @@ class RadioButtonGroup(BaseButtonGroup, object):
             self.checkedChanged.emiet(value)
 
     checked = Property(int, _get_checked, _sert_checked, notify=checkedChanged)
-
-

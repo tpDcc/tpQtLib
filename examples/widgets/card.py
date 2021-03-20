@@ -44,7 +44,8 @@ class CardExample(tpDcc.Window, mixin.FieldMixin):
         meta_card_lyt = layouts.FlowLayout()
         meta_card_lyt.setSpacing(20)
         for setting in [
-            {'title': 'Houdini', 'description': 'Side Effects Software', 'avatar': user_pixmap, 'cover': houdini_pixmap},
+            {'title': 'Houdini', 'description': 'Side Effects Software', 'avatar': user_pixmap,
+             'cover': houdini_pixmap},
             {'title': 'Autodesk Maya', 'description': '3D', 'cover': houdini_pixmap}
         ]:
             meta_card = card.MetaCard()

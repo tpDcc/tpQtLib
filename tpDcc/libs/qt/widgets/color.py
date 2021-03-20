@@ -2378,4 +2378,3 @@ class ColorPaletteWidget(base.BaseWidget):
 
     def _fill_default_color_list(self):
         pass
-

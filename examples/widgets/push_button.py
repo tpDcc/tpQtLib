@@ -16,8 +16,7 @@ class PushButtonExample(tpDcc.Window, object):
         trash_icon = tpDcc.ResourcesMgr().icon('trash')
 
         sub_layout_1 = layouts.HorizontalLayout()
-        sub_layout_1.addWidget(butt
-        ons.BaseButton('Default'))
+        sub_layout_1.addWidget(buttons.BaseButton('Default'))
         sub_layout_1.addWidget(buttons.BaseButton('Primary').primary())
         sub_layout_1.addWidget(buttons.BaseButton('Success').success())
         sub_layout_1.addWidget(buttons.BaseButton('Warning').warning())

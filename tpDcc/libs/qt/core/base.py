@@ -263,7 +263,7 @@ class DirectoryWidget(BaseWidget, object):
         with qt_contexts.block_signals(self):
             self.set_directory(directory)
 
-    directory = Property(str, _get_directory ,_set_directory)
+    directory = Property(str, _get_directory, _set_directory)
 
     def get_directory(self):
         return self._directory

@@ -75,4 +75,3 @@ if __name__ == '__main__':
         window.statusBar().showMessage('Status Bar')
         window.setStyleSheet(default_theme.stylesheet())
         window.show()
-

@@ -7,7 +7,7 @@ Module that contains custom widget for Qt check boxes
 
 from __future__ import print_function, division, absolute_import
 
-from Qt.QtCore import Qt,Property,  QRect
+from Qt.QtCore import Qt, Property, QRect
 from Qt.QtWidgets import QCheckBox, QStylePainter, QStyleOption
 from Qt.QtGui import QColor, QPainter, QBrush
 
