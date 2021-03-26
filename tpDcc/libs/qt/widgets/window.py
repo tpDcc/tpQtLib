@@ -15,7 +15,7 @@ from collections import defaultdict
 
 from Qt.QtCore import Qt, Signal, QByteArray, QSettings
 from Qt.QtWidgets import QApplication, QSizePolicy, QToolBar, QScrollArea, QMenuBar, QAction, QDockWidget
-from Qt.QtWidgets import QMainWindow, QWidget, QTabWidget, QTabBar
+from Qt.QtWidgets import QMainWindow, QWidget, QFrame, QTabWidget, QTabBar
 
 from tpDcc import dcc
 from tpDcc.core import dcc as core_dcc
@@ -29,7 +29,7 @@ from tpDcc.libs.qt.widgets import layouts
 LOGGER = logging.getLogger('tpDcc-libs-qt')
 
 
-class WindowContents(QWidget, object):
+class WindowContents(QFrame, object):
     """
     Widget that defines the core contents of frameless window
     Can be used to custom CSS for frameless windows contents
@@ -926,7 +926,7 @@ class MainWindow(BaseWindow, object):
             return
 
         from tpDcc.managers import callbacks
-        return callbacks.CallbacksManager.register(callback_type=callback_type, fn=fn, owner=self)
+        return callbacks.CallbacksManager().register(callback_type=callback_type, fn=fn, owner=self)
 
     def unregister_callbacks(self):
         """
@@ -934,7 +934,7 @@ class MainWindow(BaseWindow, object):
         """
 
         from tpDcc.managers import callbacks
-        callbacks.CallbacksManager.unregister_owner_callbacks(owner=self)
+        callbacks.CallbacksManager().unregister_owner_callbacks(owner=self)
 
     # ============================================================================================================
     # BASE
