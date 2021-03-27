@@ -27,7 +27,6 @@ Submodules
    tpDcc.libs.qt.core.resizers
    tpDcc.libs.qt.core.settings
    tpDcc.libs.qt.core.statusbar
-   tpDcc.libs.qt.core.svg
    tpDcc.libs.qt.core.timers
    tpDcc.libs.qt.core.tool
    tpDcc.libs.qt.core.traymessage

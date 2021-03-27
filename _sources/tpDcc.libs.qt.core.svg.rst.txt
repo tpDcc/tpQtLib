@@ -1,7 +1,0 @@
-tpDcc.libs.qt.core.svg module
-=============================
-
-.. automodule:: tpDcc.libs.qt.core.svg
-   :members:
-   :undoc-members:
-   :show-inheritance:
