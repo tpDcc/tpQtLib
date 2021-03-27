@@ -2,8 +2,6 @@
 # tpDcc-libs-qt requirements file
 # ===================================================================
 
-pysvg==0.2.2;python_version < '3'
-pysvg-py3;python_version >= '3'
 singledispatch==3.4.0.3;python_version < '3.4'
 tpDcc-core
 tpDcc-libs-python
