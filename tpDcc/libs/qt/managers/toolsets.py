@@ -13,7 +13,8 @@ import logging
 from collections import OrderedDict
 
 from tpDcc.managers import configs
-from tpDcc.libs.python import python, color, decorators, plugin, folder, yamlio
+from tpDcc.libs.python import python, color, decorators, folder, yamlio
+from tpDcc.libs.plugin.core import factory
 
 from tpDcc.libs.qt.core import consts
 from tpDcc.libs.qt.widgets import toolset
@@ -27,7 +28,7 @@ logger = logging.getLogger(consts.LIB_ID)
 
 
 @decorators.add_metaclass(decorators.Singleton)
-class ToolsetsManager(plugin.PluginFactory):
+class ToolsetsManager(factory.PluginFactory):
 
     REGEX_FOLDER_VALIDATOR = re.compile('^((?!__pycache__)(?!dccs).)*$')
 

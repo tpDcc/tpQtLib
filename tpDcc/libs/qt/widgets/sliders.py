@@ -11,14 +11,14 @@ from copy import copy
 
 from Qt.QtCore import Qt, Signal, Property, QPoint, QPointF, QEvent
 from Qt.QtWidgets import QSizePolicy, QWidget, QAbstractSpinBox, QDoubleSpinBox, QStyle, QStyleOptionSlider
-from Qt.QtWidgets import QGroupBox, QSlider, QToolTip, QMenu, QColorDialog
-from Qt.QtGui import QCursor, QColor, QFont, QPainter, QBrush, QLinearGradient, QMouseEvent
+from Qt.QtWidgets import QGroupBox, QSlider, QToolTip
+from Qt.QtGui import QCursor, QColor, QFont, QPainter, QMouseEvent
 
 from tpDcc import dcc
-from tpDcc.libs.python import mathlib, color as core_color
+from tpDcc.libs.python import color as core_color
 from tpDcc.libs.resources.core import theme, color
-from tpDcc.libs.qt.core import qtutils, contexts as qt_contexts
-from tpDcc.libs.qt.widgets import layouts, label, buttons
+from tpDcc.libs.qt.core import utils, qtutils, contexts as qt_contexts
+from tpDcc.libs.qt.widgets import layouts, label
 
 FLOAT_SLIDER_DRAG_STEPS = [100.0, 10.0, 1.0, 0.1, 0.01, 0.001]
 INT_SLIDER_DRAG_STEPS = [100.0, 10.0, 1.0]
@@ -83,7 +83,7 @@ class SliderDraggers(QWidget, object):
                 if not self._initial_pos:
                     self._initial_pos = event.globalPos()
                 delta_x = event.globalPos().x() - self._initial_pos.x()
-                self._change_direction = mathlib.clamp(delta_x - self._last_delta_x, -1.0, 1.0)
+                self._change_direction = utils.clamp(delta_x - self._last_delta_x, -1.0, 1.0)
                 if self._change_direction != 0:
                     v = self._change_direction * self._active_drag.factor
                     if modifiers == Qt.NoModifier and delta_x % 4 == 0:
@@ -273,7 +273,7 @@ class DoubleSlider(Slider, object):
         :return:
         """
 
-        return mathlib.map_range_unclamped(
+        return utils.map_range_unclamped(
             in_value, self.minimum(), self.maximum(), self._slider_range[0], self._slider_range[1])
 
     def _unmap_value(self, out_value):
@@ -283,7 +283,7 @@ class DoubleSlider(Slider, object):
         :return:
         """
 
-        return int(mathlib.map_range_unclamped(
+        return int(utils.map_range_unclamped(
             out_value, self._slider_range[0], self._slider_range[1], self.minimum(), self.maximum()))
 
     def _on_value_changed(self, x):
@@ -631,14 +631,14 @@ class HoudiniDoubleSlider(QWidget, object):
         self.valueChanged.emit(new)
 
     def _on_slider_value_changed(self, value):
-        out_value = mathlib.map_range_unclamped(
+        out_value = utils.map_range_unclamped(
             value, self._slider.minimum(), self._slider.maximum(), self._input.minimum(), self._input.maximum())
         with qt_contexts.block_signals(self._input):
             self._input.setValue(out_value)
         self.valueChanged.emit(out_value)
 
     def _on_houdini_slider_value_changed(self, value):
-        in_value = mathlib.map_range_unclamped(
+        in_value = utils.map_range_unclamped(
             self._input.value(), self._input.minimum(), self._input.maximum(),
             self._slider.minimum(), self._slider.maximum())
         with qt_contexts.block_signals(self._slider):

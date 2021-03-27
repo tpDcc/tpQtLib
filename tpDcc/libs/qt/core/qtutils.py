@@ -9,13 +9,18 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import struct
 import logging
 import inspect
 import contextlib
 
+from tpDcc import dcc
 from tpDcc.libs.python import python
+from tpDcc.libs.resources.core import color
 
-LOGGER = logging.getLogger('tpDcc-libs-qt')
+from tpDcc.libs.qt.core import consts
+
+LOGGER = logging.getLogger(consts.LIB_ID)
 
 QT_ERROR_MESSAGE = 'Qt.py is not available and Qt related functionality will not be available!'
 
@@ -50,19 +55,16 @@ if QT_AVAILABLE:
                 except Exception:
                     pass
 
-from tpDcc import dcc
-from tpDcc.libs.python import mathlib
-from tpDcc.libs.resources.core import color
-from tpDcc.libs.qt.core import consts
-
 # ==============================================================================
+
+MAX_INT = 2 ** (struct.Struct('i').size * 8 - 1) - 1
 
 UI_EXTENSION = '.ui'
 QWIDGET_SIZE_MAX = (1 << 24) - 1
-FLOAT_RANGE_MIN = 0.1 + (-mathlib.MAX_INT - 1.0)
-FLOAT_RANGE_MAX = mathlib.MAX_INT + 0.1
-INT_RANGE_MIN = -mathlib.MAX_INT
-INT_RANGE_MAX = mathlib.MAX_INT
+FLOAT_RANGE_MIN = 0.1 + (-MAX_INT - 1.0)
+FLOAT_RANGE_MAX = MAX_INT + 0.1
+INT_RANGE_MIN = -MAX_INT
+INT_RANGE_MAX = MAX_INT
 CURRENT_DIR = os.path.expanduser('~')
 
 

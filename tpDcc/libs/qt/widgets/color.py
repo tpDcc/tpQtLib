@@ -20,9 +20,9 @@ from Qt.QtGui import QPixmap, QImage, QPolygonF, QDrag
 
 from tpDcc.dcc import dialog
 from tpDcc.managers import resources
-from tpDcc.libs.python import mathlib, python
+from tpDcc.libs.python import python
 from tpDcc.libs.resources.core import color as core_color
-from tpDcc.libs.qt.core import base, qtutils, contexts as qt_contexts
+from tpDcc.libs.qt.core import base, utils, qtutils, contexts as qt_contexts
 from tpDcc.libs.qt.widgets import layouts, buttons, label, spinbox, dividers, panel, sliders
 
 
@@ -589,8 +589,8 @@ class Color2DSlider(QWidget, object):
 
     def _set_color_from_pos(self, pt, size):
         pt_float = QPointF(
-            mathlib.clamp(float(pt.x()) / size.width(), 0.0, 1.0),
-            mathlib.clamp(1 - float(pt.y()) / size.height(), 0.0, 1.0)
+            utils.clamp(float(pt.x()) / size.width(), 0.0, 1.0),
+            utils.clamp(1 - float(pt.y()) / size.height(), 0.0, 1.0)
         )
 
         if self._comp_x == self.Component.HUE:
@@ -728,17 +728,17 @@ class ColorWheel(QWidget, object):
             center_mouse_ln.setAngle(center_mouse_ln.angle() + self._selector_image_angle())
             center_mouse_ln.setP2(center_mouse_ln.p2() - self._selector_image_offset())
             if self._selector_shape == self.WheelShape.SQUARE:
-                self._sat = mathlib.clamp(center_mouse_ln.x2() / self._square_size(), 0.0, 1.0)
-                self._val = mathlib.clamp(center_mouse_ln.y2() / self._square_size(), 0.0, 1.0)
+                self._sat = utils.clamp(center_mouse_ln.x2() / self._square_size(), 0.0, 1.0)
+                self._val = utils.clamp(center_mouse_ln.y2() / self._square_size(), 0.0, 1.0)
             elif self._selector_shape == self.WheelShape.TRIANGLE:
                 pt = center_mouse_ln.p2()
                 side = self._triangle_side()
-                self._val = mathlib.clamp(pt.x() / self._triangle_height(), 0.0, 1.0)
+                self._val = utils.clamp(pt.x() / self._triangle_height(), 0.0, 1.0)
                 slice_h = side * self._val
                 y_center = side / 2
                 y_min = y_center - slice_h / 2
                 if slice_h > 0:
-                    self._sat = mathlib.clamp((pt.y() - y_min) / slice_h, 0.0, 1.0)
+                    self._sat = utils.clamp((pt.y() - y_min) / slice_h, 0.0, 1.0)
 
         self.colorSelected.emit(self.color())
         self.colorChanged.emit(self.color())
@@ -791,7 +791,7 @@ class ColorWheel(QWidget, object):
         return self._hue
 
     def set_hue(self, hue):
-        self._hue = mathlib.clamp(hue, 0.0, 1.0)
+        self._hue = utils.clamp(hue, 0.0, 1.0)
         self._render_inner_selector()
         self.update()
 
@@ -799,14 +799,14 @@ class ColorWheel(QWidget, object):
         return self.color().hsvSaturationF()
 
     def set_saturation(self, sat):
-        self._sat = mathlib.clamp(sat, 0.0, 1.0)
+        self._sat = utils.clamp(sat, 0.0, 1.0)
         self.update()
 
     def value(self):
         return self.color().valueF()
 
     def set_value(self, val):
-        self._val = mathlib.clamp(val, 0.0, 1.0)
+        self._val = utils.clamp(val, 0.0, 1.0)
         self.update()
 
     def color_space(self):
@@ -1008,7 +1008,7 @@ class ColorWheel(QWidget, object):
             slice_h = size.height() * point_val
             for y in range(init_size.height()):
                 y_min = y_center - slice_h / 2
-                point_sat = mathlib.clamp((y - y_min) / slice_h, 0.0, 1.0) if slice_h > 0 else 0
+                point_sat = utils.clamp((y - y_min) / slice_h, 0.0, 1.0) if slice_h > 0 else 0
                 color = self._color_from(self._hue, point_sat, point_val, 1).rgb()
                 self._inner_selector_buffer[init_size.width() * y + x] = color
 
@@ -1589,7 +1589,7 @@ class HueSlider(GradientSlider, object):
         return self._saturation
 
     def set_color_saturation(self, saturation):
-        self._saturation = mathlib.clamp(saturation, 0.0, 1.0)
+        self._saturation = utils.clamp(saturation, 0.0, 1.0)
         self._update_gradient()
         self.colorSaturationChanged.emit(saturation)
 
@@ -1597,7 +1597,7 @@ class HueSlider(GradientSlider, object):
         return self._value
 
     def set_color_value(self, value):
-        self._value = mathlib.clamp(value, 0.0, 1.0)
+        self._value = utils.clamp(value, 0.0, 1.0)
         self._update_gradient()
         self.colorValueChanged.emit(value)
 
@@ -2331,7 +2331,7 @@ class ColorRgbSliders(base.BaseWidget, object):
         if self._alpha:
             value_list.append(self._alpha_slider.mapped_value())
         if self._type == 'int':
-            value_list = [mathlib.clamp(int(i), 0, 255) for i in value_list]
+            value_list = [utils.clamp(int(i), 0, 255) for i in value_list]
         self._color = python.force_tuple(value_list)
         self.colorChanged.emit(self._color)
 
@@ -2342,17 +2342,17 @@ class ColorRgbSliders(base.BaseWidget, object):
             new_color = QColorDialog.getColor()
         if new_color.isValid():
             self._red_slider.set_mapped_value(
-                mathlib.map_range_unclamped(
+                utils.map_range_unclamped(
                     new_color.redF(), 0.0, 1.0, self._red_slider.slider_range[0], self._red_slider.slider_range[1]))
             self._green_slider.set_mapped_value(
-                mathlib.map_range_unclamped(
+                utils.map_range_unclamped(
                     new_color.greenF(), 0.0, 1.0, self._green_slider.slider_range[0],
                     self._green_slider.slider_range[1]))
             self._blue_slider.set_mapped_value(
-                mathlib.map_range_unclamped(
+                utils.map_range_unclamped(
                     new_color.blueF(), 0.0, 1.0, self._blue_slider.slider_range[0], self._blue_slider.slider_range[1]))
             self._alpha_slider.set_mapped_value(
-                mathlib.map_range_unclamped(
+                utils.map_range_unclamped(
                     new_color.alphaF(), 0.0, 1.0, self._alpha_slider.slider_range[0],
                     self._alpha_slider.slider_range[1]))
 
