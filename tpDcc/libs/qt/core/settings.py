@@ -10,11 +10,10 @@ from __future__ import print_function, division, absolute_import
 import os
 import sys
 
-from Qt.QtCore import QSettings, QPoint, QSize
-from Qt.QtWidgets import QMainWindow, QDockWidget, QComboBox, QCheckBox, QToolButton, QSpinBox, QLineEdit
-from Qt.QtWidgets import QDoubleSpinBox
+from Qt.QtCore import QSettings
+from Qt.QtWidgets import QMainWindow, QDockWidget
 
-from tpDcc.libs.python import python, strings, settings
+from tpDcc.libs.python import python, strings
 
 
 class QtSettings(QSettings, object):
@@ -335,76 +334,3 @@ class QtSettings(QSettings, object):
 
             while self.group():
                 self.endGroup()
-
-
-class QtIniSettings(settings.INISettings, object):
-    def __init__(self, filename):
-        super(QtIniSettings, self).__init__(filename)
-
-    def export_widget(self, option, widget):
-        """
-        Serializes a widget's state to an option, value pair Sets the value with an associated key in
-        the section at the top of the section stack.
-
-        :param str option:   The key to use in storing the value.
-        :param str widget:   The QWidget to extract value to store.
-        """
-
-        if isinstance(widget, QComboBox):
-            self.export_option(option, widget.currentIndex())
-        elif isinstance(widget, QCheckBox):
-            self.export_option(option, widget.isChecked())
-        elif isinstance(widget, QToolButton):
-            if widget.isCheckable():
-                self.export_option(option, widget.isChecked())
-        elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-            self.export_option(option, widget.value())
-        elif isinstance(widget, QLineEdit):
-            self.export_option(option, widget.text())
-        elif isinstance(widget, (QSize, QPoint)):
-            self.export_option(option, widget.toTuple())
-        else:
-            assert False, "Unknown control type"
-
-    def import_widget(self, option, widget):
-        """
-        Serializes a widget's state to an option, value pair Sets the value with an associated key in the
-        section at the top of the section stack.
-
-        :param str option:   The key to use in storing the value.
-        :param str widget:   The QWidget to extract value to store.
-        """
-
-        if isinstance(widget, QComboBox):
-            d = 0 if (widget.currentIndex() < 0) else widget.currentIndex()
-            v = self.import_option(option, d)
-            widget.setCurrentIndex(v)
-        elif isinstance(widget, QCheckBox):
-            d = widget.isChecked()
-            v = self.import_option(option, d)
-            widget.setChecked(v)
-        elif isinstance(widget, QToolButton):
-            if widget.isCheckable():
-                d = widget.isChecked()
-                v = self.import_option(option, d)
-                widget.setChecked(v)
-        elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
-            d = widget.value()
-            v = self.import_option(option, d)
-            widget.setValue(v)
-        elif isinstance(widget, QLineEdit):
-            d = widget.text()
-            v = self.import_option(option, d)
-            widget.setText(v)
-        elif isinstance(widget, QSize):
-            d = widget.toTuple()
-            v = self.import_option(option, d, True)
-            widget.setWidth(v[0])
-            widget.setHeight(v[1])
-        elif isinstance(widget, QPoint):
-            d = widget.toTuple()
-            v = self.import_option(option, d, True)
-            widget.setX(v[0])
-            widget.setY(v[1])
-        else:
-            assert False, "Unknown control type"
