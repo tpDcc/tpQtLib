@@ -30,6 +30,7 @@ Submodules
    tpDcc.libs.qt.core.timers
    tpDcc.libs.qt.core.tool
    tpDcc.libs.qt.core.traymessage
+   tpDcc.libs.qt.core.utils
    tpDcc.libs.qt.core.worker
 
 Module contents
