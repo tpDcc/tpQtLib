@@ -15,7 +15,7 @@ from Qt.QtCore import Qt, Signal, QPoint, QRectF, QLineF
 from Qt.QtWidgets import QGraphicsRectItem, QGraphicsView, QGraphicsItem
 from Qt.QtGui import QColor, QPen, QBrush, QPainter, QImage, QVector2D
 
-from tpDcc.libs.python import mathlib
+from tpDcc.libs.math.core import scalar
 
 LOGGER = logging.getLogger('tpDcc-libs-qt')
 
@@ -69,19 +69,19 @@ class AutoPanController(object):
             if pos.x() < 0:
                 self._auto_pan_delta = QVector2D(-self._amount, 0.0)
                 self._been_outside = True
-                self._amount = mathlib.clamp(abs(pos.x()) * 0.3, 0.0, 25.0)
+                self._amount = scalar.clamp(abs(pos.x()) * 0.3, 0.0, 25.0)
             if pos.x() > rect.width():
                 self._auto_pan_delta = QVector2D(self._amount, 0.0)
                 self._been_outside = True
-                self._amount = mathlib.clamp(abs(rect.width() - pos.x()) * 0.3, 0.0, 25.0)
+                self._amount = scalar.clamp(abs(rect.width() - pos.x()) * 0.3, 0.0, 25.0)
             if pos.y() < 0:
                 self._auto_pan_delta = QVector2D(0.0, -self._amount)
                 self._been_outside = True
-                self._amount = mathlib.clamp(abs(pos.y()) * 0.3, 0.0, 25.0)
+                self._amount = scalar.clamp(abs(pos.y()) * 0.3, 0.0, 25.0)
             if pos.y() > rect.height():
                 self._auto_pan_delta = QVector2D(0.0, self._amount)
                 self._been_outside = True
-                self._amount = mathlib.clamp(abs(rect.height() - pos.y()) * 0.3, 0.0, 25.0)
+                self._amount = scalar.clamp(abs(rect.height() - pos.y()) * 0.3, 0.0, 25.0)
             if self._been_outside and rect.contains(pos):
                 self.reset()
 
