@@ -11,14 +11,6 @@ Subpackages
    tpDcc.libs.qt.managers
    tpDcc.libs.qt.widgets
 
-Submodules
-----------
-
-.. toctree::
-   :maxdepth: 4
-
-   tpDcc.libs.qt.loader
-
 Module contents
 ---------------
 
