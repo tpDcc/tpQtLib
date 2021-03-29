@@ -12,7 +12,6 @@ import re
 import logging
 from collections import OrderedDict
 
-from tpDcc.managers import configs
 from tpDcc.libs.python import python, color, decorators, folder, yamlio
 from tpDcc.libs.plugin.core import factory
 
@@ -51,23 +50,14 @@ class ToolsetsManager(factory.PluginFactory):
     # TOOLSETS
     # ============================================================================================================
 
-    def register_toolset_file_path(self, path_to_register, package_name=None):
-        """
-        Register path to find toolsets from
-        :return: str
-        """
+    def register_package_toolsets(self, package_name, toolsets_file_path, toolsets_paths):
 
-        if not path_to_register or not os.path.isdir(path_to_register):
-            return None
-        if package_name not in self._registered_file_paths:
-            self._registered_file_paths[package_name] = list()
-        if path_to_register not in self._registered_file_paths[package_name]:
-            self._registered_file_paths[package_name].append(path_to_register)
+        self._load_registered_paths_toolsets(package_name, toolsets_file_path)
 
-    def load_registered_toolsets(self, package_name, tools_to_load):
-        self._load_registered_paths_toolsets(package_name=package_name)
-        self._load_package_toolsets(
-            package_name=package_name, tools_to_load=tools_to_load)
+        if not toolsets_paths:
+            return
+        toolsets_paths = python.remove_dupes(python.force_list(toolsets_paths))
+        self.register_paths(toolsets_paths, package_name=package_name)
 
         if package_name not in self._toolsets:
             self._toolsets[package_name] = list()
@@ -75,16 +65,23 @@ class ToolsetsManager(factory.PluginFactory):
         if not toolset_data:
             return True
 
-        for tool_set in toolset_data:
-            if tool_set.ID not in self._toolsets[package_name]:
-                toolset_config = configs.get_tool_config(tool_set.ID, package_name=package_name)
-                if not toolset_config:
-                    logger.warning(
-                        'No valid configuration file found for toolset: "{}" in package: "{}"'.format(
-                            tool_set.ID, package_name))
-                    continue
-                tool_set.CONFIG = toolset_config
-                self._toolsets[package_name].append({tool_set.ID: tool_set})
+        for toolset in self.plugins(package_name=package_name):
+            if not toolset:
+                continue
+
+            # if not toolset.PACKAGE:
+            #     toolset.PACKAGE = package_name
+
+        # for tool_set in toolset_data:
+        #     if tool_set.ID not in self._toolsets[package_name]:
+        #         toolset_config = configs.get_tool_config(tool_set.ID, package_name=package_name)
+        #         if not toolset_config:
+        #             logger.warning(
+        #                 'No valid configuration file found for toolset: "{}" in package: "{}"'.format(
+        #                     tool_set.ID, package_name))
+        #             continue
+        #         tool_set.CONFIG = toolset_config
+        #         self._toolsets[package_name].append({tool_set.ID: tool_set})
 
         return True
 
@@ -312,76 +309,37 @@ class ToolsetsManager(factory.PluginFactory):
     # INTERNAL
     # ============================================================================================================
 
-    def _load_registered_paths_toolsets(self, package_name):
+    def _load_registered_paths_toolsets(self, package_name, toolsets_file_paths):
         """
         Loads all toolsets found in registered paths
         """
 
-        if not self._registered_file_paths:
+        if not toolsets_file_paths:
             return
+
+        toolsets_file_paths = python.remove_dupes(python.force_list(toolsets_file_paths))
 
         # Load toolsets data
-        for pkg_name, registered_paths in self._registered_file_paths.items():
-            if package_name != pkg_name:
+        for registered_path in toolsets_file_paths:
+            if not registered_path or not os.path.isdir(registered_path):
                 continue
-            for registered_path in registered_paths:
-                if not registered_path or not os.path.isdir(registered_path):
+            for pth in folder.get_files_with_extension(
+                    toolset.ToolsetWidget.EXTENSION, registered_path, full_path=True, recursive=True):
+                try:
+                    toolset_data = yamlio.read_file(pth, maintain_order=True)
+                except Exception:
+                    logger.warning('Impossible to read toolset data from: "{}!'.format(pth))
                     continue
-                for pth in folder.get_files_with_extension(
-                        toolset.ToolsetWidget.EXTENSION, registered_path, full_path=True, recursive=True):
-                    try:
-                        toolset_data = yamlio.read_file(pth, maintain_order=True)
-                    except Exception:
-                        logger.warning('Impossible to read toolset data from: "{}!'.format(pth))
-                        continue
-                    if pkg_name not in self._toolset_groups:
-                        self._toolset_groups[pkg_name] = list()
-                    toolset_type = toolset_data.get('type')
-                    toolset_not_added = True
-                    for _, toolset_groups in self._toolset_groups.items():
-                        for toolset_group in toolset_groups:
-                            if toolset_type == toolset_group['type']:
-                                toolset_not_added = False
-                                break
-                        if not toolset_not_added:
+                if package_name not in self._toolset_groups:
+                    self._toolset_groups[package_name] = list()
+                toolset_type = toolset_data.get('type')
+                toolset_not_added = True
+                for _, toolset_groups in self._toolset_groups.items():
+                    for toolset_group in toolset_groups:
+                        if toolset_type == toolset_group['type']:
+                            toolset_not_added = False
                             break
-                    if toolset_not_added:
-                        self._toolset_groups[pkg_name].append(toolset_data)
-
-        # Load toolsets widgets
-        for pkg_name, registered_paths in self._registered_file_paths.items():
-            if package_name != pkg_name:
-                continue
-            self.register_paths(registered_paths, package_name=pkg_name)
-
-    def _load_package_toolsets(self, package_name, tools_to_load):
-        """
-        Loads all toolsets available in given package
-        :param package_name: str
-        :param tools_to_load: list
-        """
-
-        if not tools_to_load:
-            return
-        tools_to_load = python.force_list(tools_to_load)
-
-        paths_to_register = OrderedDict()
-
-        tools_path = '{}.tools.{}'
-        tools_paths_to_load = list()
-        for tool_name in tools_to_load:
-            pkg_path = tools_path.format(package_name, tool_name)
-            pkg_loader = loader.find_loader(pkg_path)
-            if not pkg_loader:
-                logger.debug('No loader found for "{}"'.format(tool_name))
-                continue
-            if tool_name not in paths_to_register:
-                paths_to_register[tool_name] = list()
-
-            package_filename = pkg_loader.filename if python.is_python2() else os.path.dirname(pkg_loader.path)
-            if package_filename not in tools_paths_to_load:
-                tools_paths_to_load.append(package_filename)
-
-        # Find where toolset widgets are located
-        if tools_paths_to_load:
-            self.register_paths(tools_paths_to_load, package_name=package_name)
+                    if not toolset_not_added:
+                        break
+                if toolset_not_added:
+                    self._toolset_groups[package_name].append(toolset_data)

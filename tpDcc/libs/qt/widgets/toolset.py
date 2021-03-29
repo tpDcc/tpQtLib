@@ -20,7 +20,7 @@ from Qt.QtGui import QCursor, QPixmap, QFont
 
 from tpDcc import dcc
 from tpDcc.core import dcc as core_dcc
-from tpDcc.managers import configs, resources
+from tpDcc.managers import resources
 from tpDcc.libs.python import python, osplatform, process, color, win32
 from tpDcc.libs.qt.core import qtutils, base, preferences
 from tpDcc.libs.qt.widgets import layouts, label, stack, buttons, switch, gif, dividers, theme

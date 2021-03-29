@@ -8,7 +8,10 @@ Initialization module for tpDcc-libs-qt
 from __future__ import print_function, division, absolute_import
 
 import os
+import sys
 import logging.config
+
+from Qt.QtWidgets import QApplication
 
 
 def create_logger(dev=False):
@@ -34,3 +37,5 @@ def create_logger(dev=False):
 
 
 create_logger()
+
+app = QApplication.instance() or QApplication(sys.argv)
