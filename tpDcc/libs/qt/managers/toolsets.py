@@ -15,6 +15,7 @@ from collections import OrderedDict
 from tpDcc.libs.python import python, color, decorators, folder, yamlio
 from tpDcc.libs.plugin.core import factory
 
+from tpDcc.managers import configs
 from tpDcc.libs.qt.core import consts
 from tpDcc.libs.qt.widgets import toolset
 
@@ -29,7 +30,7 @@ logger = logging.getLogger(consts.LIB_ID)
 @decorators.add_metaclass(decorators.Singleton)
 class ToolsetsManager(factory.PluginFactory):
 
-    REGEX_FOLDER_VALIDATOR = re.compile('^((?!__pycache__)(?!dccs).)*$')
+    REGEX_FOLDER_VALIDATOR = re.compile('^((?!__pycache__)(?!dccs)(?!plugins).)*$')
 
     def __init__(self):
         super(ToolsetsManager, self).__init__(interface=toolset.ToolsetWidget)
@@ -69,19 +70,19 @@ class ToolsetsManager(factory.PluginFactory):
             if not toolset:
                 continue
 
-            # if not toolset.PACKAGE:
-            #     toolset.PACKAGE = package_name
+            if not toolset.PACKAGE:
+                toolset.PACKAGE = package_name
 
-        # for tool_set in toolset_data:
-        #     if tool_set.ID not in self._toolsets[package_name]:
-        #         toolset_config = configs.get_tool_config(tool_set.ID, package_name=package_name)
-        #         if not toolset_config:
-        #             logger.warning(
-        #                 'No valid configuration file found for toolset: "{}" in package: "{}"'.format(
-        #                     tool_set.ID, package_name))
-        #             continue
-        #         tool_set.CONFIG = toolset_config
-        #         self._toolsets[package_name].append({tool_set.ID: tool_set})
+        for tool_set in toolset_data:
+            if tool_set.ID not in self._toolsets[package_name]:
+                toolset_config = configs.get_tool_config(tool_set.ID, package_name=package_name)
+                if not toolset_config:
+                    logger.warning(
+                        'No valid configuration file found for toolset: "{}" in package: "{}"'.format(
+                            tool_set.ID, package_name))
+                    continue
+                tool_set.CONFIG = toolset_config
+                self._toolsets[package_name].append({tool_set.ID: tool_set})
 
         return True
 
@@ -334,9 +335,9 @@ class ToolsetsManager(factory.PluginFactory):
                     self._toolset_groups[package_name] = list()
                 toolset_type = toolset_data.get('type')
                 toolset_not_added = True
-                for _, toolset_groups in self._toolset_groups.items():
+                for pkg_name, toolset_groups in self._toolset_groups.items():
                     for toolset_group in toolset_groups:
-                        if toolset_type == toolset_group['type']:
+                        if toolset_type == toolset_group['type'] and pkg_name == package_name:
                             toolset_not_added = False
                             break
                     if not toolset_not_added:

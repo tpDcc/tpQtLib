@@ -8,12 +8,14 @@ Module that contains widgets to to drag PySide windows and dialogs
 from __future__ import print_function, division, absolute_import
 
 from Qt.QtCore import Qt, Signal, QPoint, QSize, QTimer
-from Qt.QtWidgets import QApplication, QSizePolicy, QWidget, QFrame, QSpacerItem, QPushButton
-from Qt.QtGui import QColor, QPainter
+from Qt.QtWidgets import QApplication, QWidget, QFrame, QPushButton
+from Qt.QtGui import QPainter
 
+from tpDcc import dcc
 from tpDcc.managers import resources
+from tpDcc.libs.python import python
 from tpDcc.libs.qt.core import qtutils
-from tpDcc.libs.qt.widgets import layouts, label
+from tpDcc.libs.qt.widgets import layouts, label, dividers
 
 
 class WindowDragger(QFrame, object):
@@ -26,7 +28,7 @@ class WindowDragger(QFrame, object):
     doubleClicked = Signal()
 
     def __init__(self, window=None, on_close=None):
-        super(WindowDragger, self).__init__(window)
+        super(WindowDragger, self).__init__(parent=window)
 
         self._window = window
         self._dragging_enabled = True
@@ -101,26 +103,32 @@ class WindowDragger(QFrame, object):
     def ui(self):
         self.setFixedHeight(qtutils.dpi_scale(40))
 
-        main_layout = layouts.HorizontalLayout(spacing=5, margins=(15, 0, 15, 0))
+        main_layout = layouts.HorizontalLayout(spacing=2, margins=(5, 0, 5, 0))
         self.setLayout(main_layout)
 
         self._logo_button = self._setup_logo_button()
+        self._setup_logo_button_actions(self._logo_button)
         self._title_text = label.ClippedLabel(text=self._window.windowTitle())
         self._title_text.setObjectName('WindowDraggerLabel')
-        self._contents_layout = layouts.HorizontalLayout()
-        self._corner_contents_layout = layouts.HorizontalLayout()
+        self._contents_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
+        self._corner_contents_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
 
+        vertical_separator1 = dividers.get_vertical_separator_widget(parent=self)
+        vertical_separator2 = dividers.get_vertical_separator_widget(parent=self)
         main_layout.addWidget(self._logo_button)
+        main_layout.addWidget(vertical_separator1)
         main_layout.addWidget(self._title_text)
-        main_layout.addItem(QSpacerItem(25, 0, QSizePolicy.Fixed, QSizePolicy.Fixed))
+        main_layout.addWidget(vertical_separator2)
         main_layout.addLayout(self._contents_layout)
+        main_layout.addStretch()
         main_layout.addLayout(self._corner_contents_layout)
+        self._vertical_separators = [vertical_separator1, vertical_separator2]
 
-        buttons_widget = QWidget()
+        self._buttons_widget = QWidget()
         self.buttons_layout = layouts.HorizontalLayout(spacing=0, margins=(0, 0, 0, 0))
         self.buttons_layout.setAlignment(Qt.AlignRight)
-        buttons_widget.setLayout(self.buttons_layout)
-        main_layout.addWidget(buttons_widget)
+        self._buttons_widget.setLayout(self.buttons_layout)
+        main_layout.addWidget(self._buttons_widget)
 
         self._button_minimized = QPushButton()
         self._button_minimized.setIconSize(QSize(25, 25))
@@ -162,6 +170,8 @@ class WindowDragger(QFrame, object):
         """
 
         icon = icon or self._window.windowIcon()
+        if icon and python.is_string(icon):
+            icon = resources.icon(icon)
         if not icon or icon.isNull():
             icon = resources.icon('tpDcc')
 
@@ -177,6 +187,20 @@ class WindowDragger(QFrame, object):
         self._logo_button.set_icon_idle(icon)
 
         # self._lbl_icon.setPixmap(icon.pixmap(icon.actualSize(QSize(24, 24))))
+
+    def set_icon_hover(self, icon=None):
+        """
+        Sets the icon hover of the window dragger
+        :param icon: QIcon
+        """
+
+        icon = icon or self._window.windowIcon()
+        if icon and python.is_string(icon):
+            icon = resources.icon(icon)
+        if not icon or icon.isNull():
+            icon = resources.icon('tpDcc')
+
+        self._logo_button.set_icon_hover(icon)
 
     def set_height(self, value):
         """
@@ -310,16 +334,31 @@ class WindowDragger(QFrame, object):
         :return: IconMenuButton
         """
 
+        # To avoid cyclic imports
         from tpDcc.libs.qt.widgets import buttons
+
         logo_button = buttons.IconMenuButton(parent=self)
         logo_button.setIconSize(QSize(24, 24))
         logo_button.setFixedSize(QSize(30, 30))
-        self._toggle_frameless = logo_button.addAction(
-            'Toggle Frameless Mode', connect=self._on_toggle_frameless_mode, checkable=True)
-        self._toggle_frameless.setChecked(self._window.is_frameless())
         logo_button.set_menu_align(Qt.AlignLeft)
 
         return logo_button
+
+    def _setup_logo_button_actions(self, logo_button):
+        """
+        Internal function that setup window dragger button logo actions
+        """
+
+        if not logo_button:
+            return
+
+        self._toggle_frameless = logo_button.addAction(
+            'Toggle Frameless Mode', connect=self._on_toggle_frameless_mode, checkable=True)
+        self._toggle_frameless.setChecked(self._window.is_frameless())
+
+        if dcc.is_maya() and dcc.get_version() >= 2022:
+            self._toggle_frameless.setText('Toggle Frameless Mode (not available)')
+            self._toggle_frameless.setEnabled(False)
 
     def _on_toggle_frameless_mode(self, action):
         """
@@ -392,7 +431,9 @@ class DialogDragger(WindowDragger, object):
         :return: IconMenuButton
         """
 
+        # To avoid cyclic imports
         from tpDcc.libs.qt.widgets import buttons
+
         logo_button = buttons.IconMenuButton(parent=self)
         logo_button.setIconSize(QSize(24, 24))
         logo_button.setFixedSize(QSize(30, 30))

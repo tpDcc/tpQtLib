@@ -10,7 +10,6 @@ from __future__ import print_function, division, absolute_import
 import os
 import uuid
 import logging
-import weakref
 from collections import defaultdict
 
 from Qt.QtCore import Qt, Signal, QByteArray, QSettings
@@ -20,7 +19,7 @@ from Qt.QtWidgets import QMainWindow, QWidget, QFrame, QTabWidget, QTabBar
 from tpDcc import dcc
 from tpDcc.core import dcc as core_dcc
 from tpDcc.managers import resources
-from tpDcc.libs.python import path, folder
+from tpDcc.libs.python import python, path, folder
 from tpDcc.libs.resources.core import theme
 from tpDcc.libs.qt.core import qtutils, animation, statusbar, dragger, resizers
 from tpDcc.libs.qt.core import settings as qt_settings
@@ -749,7 +748,8 @@ class MainWindow(BaseWindow, object):
         else:
             self._dragger.set_dragging_enabled(True)
             self._dragger.set_window_buttons_state(True)
-        self._dragger._toggle_frameless.setChecked(self.is_frameless())
+
+        self.update_dragger()
 
         # We set the window title after UI is created
         self.setWindowTitle(kwargs.get('title', 'tpDcc'))
@@ -831,6 +831,8 @@ class MainWindow(BaseWindow, object):
         super(MainWindow, self).closeEvent(event)
 
     def setWindowIcon(self, icon):
+        if python.is_string(icon):
+            icon = resources.icon(icon)
         if self.is_frameless() or (hasattr(self, '_dragger') and self._dragger):
             self._dragger.set_icon(icon)
         super(MainWindow, self).setWindowIcon(icon)
@@ -1027,21 +1029,36 @@ class MainWindow(BaseWindow, object):
 
         self._dragger.set_window_buttons_state(state, show_close_button)
 
+    def update_dragger(self):
+        """
+        Updates dragger status
+        """
+
+        self._dragger._toggle_frameless.setChecked(self.is_frameless())
+
     # ============================================================================================================
     # RESIZERS
     # ============================================================================================================
 
-    def set_resizers_active(self, flag):
+    def set_resizers_active(self, flag, resizers_to_edit=resizers.Resizers.All):
         """
         Sets whether resizers are enable or not
         :param flag: bool
         """
 
+        resizers_to_enable = list()
+        if resizers_to_edit & resizers.Resizers.Corners == resizers.Resizers.Corners:
+            resizers_to_enable += self.get_corner_resizers()
+        if resizers_to_edit & resizers.Resizers.Vertical == resizers.Resizers.Vertical:
+            resizers_to_enable += self.get_vertical_resizers()
+        if resizers_to_edit & resizers.Resizers.Horizontal == resizers.Resizers.Horizontal:
+            resizers_to_enable += self.get_horizontal_resizers()
+
         if flag:
-            for r in self._resizers:
+            for r in resizers_to_enable:
                 r.show()
         else:
-            for r in self._resizers:
+            for r in resizers_to_enable:
                 r.hide()
 
     def set_resizers_enabled(self, flag, resizers_to_edit=resizers.Resizers.All):
@@ -1282,7 +1299,7 @@ class MainWindow(BaseWindow, object):
                 toolset_client = self._toolset.client
                 toolset_found = None
                 for client_id, client in dcc._CLIENTS.items():
-                    if toolset_client == client():
+                    if toolset_client == client:
                         toolset_found = client_id
                         break
 
@@ -1295,12 +1312,12 @@ class MainWindow(BaseWindow, object):
                 toolset_client = self._toolset.client
                 toolset_found = False
                 for client in list(dcc._CLIENTS.values()):
-                    if toolset_client == client():
+                    if toolset_client == client:
                         toolset_found = True
                         break
                 if not toolset_found:
-                    if self._toolset.ID not in dcc._CLIENTS:
-                        dcc._CLIENTS[self._toolset.ID] = weakref.ref(self._toolset.client)
+                    if self._toolset.ID not in dcc._CLIENTS and not self._toolset.client._server:
+                        dcc._CLIENTS[self._toolset.ID] = self._toolset.client
 
 
 class DetachedWindow(QMainWindow):

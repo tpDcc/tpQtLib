@@ -10,6 +10,7 @@ from __future__ import print_function, division, absolute_import
 from Qt.QtCore import Qt
 from Qt.QtWidgets import QWidget, QFrame
 
+from tpDcc.libs.qt.core import qtutils
 from tpDcc.libs.qt.widgets import label, layouts
 
 
@@ -142,15 +143,45 @@ class DividerLayout(layouts.HorizontalLayout, object):
         self.addWidget(splitter)
 
 
-def get_horizontal_separator_widget(max_height=30, parent=None):
+def get_horizontal_separator_widget(max_width=60, parent=None):
+    """
+    Returns vertical separator widget
+    :param max_width: int, maximum height for the separator
+    :param parent: QWidget or None, parent widget
+    :return: QWidget
+    """
 
     v_div_w = QWidget(parent=parent)
     v_div_l = layouts.VerticalLayout(spacing=0, margins=(5, 5, 5, 5))
     v_div_l.setAlignment(Qt.AlignLeft)
     v_div_w.setLayout(v_div_l)
     v_div = QFrame(parent=v_div_w)
-    v_div.setMaximumHeight(max_height)
-    v_div.setFrameShape(QFrame.VLine)
+    v_div.setObjectName('dividerSeparator')     # ID selector used by style
+    v_div.setMaximumHeight(qtutils.dpi_scale(max_width))
+    v_div.setFrameShape(QFrame.HLine)
     v_div.setFrameShadow(QFrame.Sunken)
     v_div_l.addWidget(v_div)
+
     return v_div_w
+
+
+def get_vertical_separator_widget(max_height=30, parent=None):
+    """
+    Returns horizontal separator widget
+    :param max_height: int, maximum height for the separator
+    :param parent: QWidget or None, parent widget
+    :return: QWidget
+    """
+
+    h_div_w = QWidget(parent=parent)
+    h_div_l = layouts.VerticalLayout(spacing=0, margins=(5, 5, 5, 5))
+    h_div_l.setAlignment(Qt.AlignLeft)
+    h_div_w.setLayout(h_div_l)
+    h_div = QFrame(parent=h_div_w)
+    h_div.setObjectName('dividerSeparator')         # ID selector used by style
+    h_div.setMaximumHeight(qtutils.dpi_scale(max_height))
+    h_div.setFrameShape(QFrame.VLine)
+    h_div.setFrameShadow(QFrame.Sunken)
+    h_div_l.addWidget(h_div)
+
+    return h_div_w

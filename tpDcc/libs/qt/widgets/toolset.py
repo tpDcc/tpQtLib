@@ -20,7 +20,7 @@ from Qt.QtGui import QCursor, QPixmap, QFont
 
 from tpDcc import dcc
 from tpDcc.core import dcc as core_dcc
-from tpDcc.managers import resources
+from tpDcc.managers import resources, configs
 from tpDcc.libs.python import python, osplatform, process, color, win32
 from tpDcc.libs.qt.core import qtutils, base, preferences
 from tpDcc.libs.qt.widgets import layouts, label, stack, buttons, switch, gif, dividers, theme
@@ -46,7 +46,8 @@ class ToolsetPropertiesDict(python.ObjectDict, object):
 
 class ToolsetWidget(stack.StackItem, object):
 
-    ID = 'toolsetID'
+    ID = None
+    PACKAGE = None
     CONFIG = None
     EXTENSION = 'toolset'
     ATTACHER_CLASS = None
@@ -68,13 +69,13 @@ class ToolsetWidget(stack.StackItem, object):
     toolsetDeactivated = Signal()
     helpModeChanged = Signal(bool)
 
-    def __init__(self, tree_widget=None, icon_color=(255, 255, 255), parent=None, *args, **kwargs):
+    def __init__(self, viewer=None, icon_color=(255, 255, 255), parent=None, *args, **kwargs):
 
         self._block_save = False
         self._show_warnings = True
         self._icon = self.CONFIG.get('icon') if self.CONFIG else None
         self._icon_color = icon_color
-        self._tree_widget = tree_widget
+        self._viewer = viewer
         self._stacked_widget = None
         self._prev_stack_index = None
         self._display_mode_button = None
@@ -93,14 +94,10 @@ class ToolsetWidget(stack.StackItem, object):
         self._properties = self._setup_properties()
         self._dcc_actions = list()
         title = self.CONFIG.data.get('label', '') if self.CONFIG else ''
-        collapsable = kwargs.get('collapsable', True)
         show_item_icon = kwargs.get('show_item_icon', True)
 
         super(ToolsetWidget, self).__init__(
-            title=title, collapsed=True, icon=self._icon, shift_arrows_enabled=False, title_editable=False,
-            parent=parent or tree_widget, collapsable=collapsable, show_item_icon=show_item_icon,
-            delete_button_enabled=True if tree_widget else False,
-        )
+            title=title, icon=self._icon, title_editable=False, parent=parent or viewer,show_item_icon=show_item_icon)
 
     # =================================================================================================================
     # PROPERTIES
@@ -134,7 +131,7 @@ class ToolsetWidget(stack.StackItem, object):
 
     @property
     def client(self):
-        return self._client() if self._client else None
+        return self._client if self._client else None
 
     # =================================================================================================================
     # TO OVERRIDE
@@ -194,13 +191,13 @@ class ToolsetWidget(stack.StackItem, object):
         self._contents_layout.setSpacing(0)
 
         self._stacked_widget = stack.SlidingOpacityStackedWidget(self)
+        self._stacked_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # NOTE: tpDcc style uses this objectName to apply specific style to this widget
         self._stacked_widget.setObjectName('toolsetStackedWidget')
         self._stacked_widget.setContentsMargins(0, 0, 0, 0)
         self._stacked_widget.setLineWidth(0)
         self.main_layout.addWidget(self._stacked_widget)
 
-        self.show_expand_indicator(False)
         self.set_title_text_mouse_transparent(True)
 
         self._display_mode_button = DisplayModeButton(color=self._icon_color, size=16, parent=self)
@@ -220,14 +217,14 @@ class ToolsetWidget(stack.StackItem, object):
         connect_layout.addWidget(self._connect_settings_button)
         connect_layout.addWidget(self._dcc_button)
         self._manual_button = buttons.BaseMenuButton(parent=self)
-        self._manual_button.set_icon(resources.icon('manual'))
+        self._manual_button.set_icon(resources.icon('manual', theme='simple'))
         self._manual_button.setFixedSize(QSize(22, 22))
         self._help_button = buttons.BaseMenuButton(parent=self)
-        self._help_button.set_icon(resources.icon('help'))
+        self._help_button.set_icon(resources.icon('help', theme='simple'))
         self._help_button.setFixedSize(QSize(22, 22))
         self._help_switch = switch.SwitchWidget(parent=self)
         self._settings_button = buttons.BaseMenuButton(parent=self)
-        self._settings_button.set_icon(resources.icon('settings'))
+        self._settings_button.set_icon(resources.icon('settings', theme='simple'))
         self._settings_button.setFixedSize(QSize(22, 22))
         self._help_widget = ToolsetHelpWidget()
 
@@ -258,7 +255,6 @@ class ToolsetWidget(stack.StackItem, object):
         self._title_frame.horizontal_layout.insertWidget(display_button_pos, self._display_mode_button)
         self._title_frame.horizontal_layout.setSpacing(0)
         self._title_frame.horizontal_layout.setContentsMargins(0, 0, 0, 0)
-        self._title_frame.delete_button.setIconSize(QSize(12, 12))
         self._title_frame.item_icon_button.setIconSize(QSize(20, 20))
 
         font = QFont()
@@ -271,16 +267,14 @@ class ToolsetWidget(stack.StackItem, object):
             self._dcc_button.setVisible(False)
 
         self._stacked_widget.addWidget(empty_widget)
-        self._stacked_widget.addWidget(self._widget_hider)
+        self._stacked_widget.addWidget(self._contents_widget)
         self._stacked_widget.addWidget(self._preferences_widget)
 
-        self._widget_hider.setVisible(False)
+        self._contents_widget.setVisible(False)
         self._preferences_widget.setVisible(False)
 
     def setup_signals(self):
         super(ToolsetWidget, self).setup_signals()
-
-        self._title_frame.mouseReleaseEvent = self._on_activate_event
 
         self._connect_button.clicked.connect(self._on_focus_dcc)
         self._display_mode_button.clicked.connect(self.set_current_index)
@@ -293,8 +287,6 @@ class ToolsetWidget(stack.StackItem, object):
         self._settings_button.leftClicked.connect(self._on_show_preferences_dialog)
         self._preferences_widget.closed.connect(self._on_close_preferences_window)
 
-        self.deletePressed.connect(self._on_stop_callbacks)
-
     # =================================================================================================================
     # BASE
     # =================================================================================================================
@@ -306,7 +298,7 @@ class ToolsetWidget(stack.StackItem, object):
             status = client.get_status_level()
             status_message = client.get_status_message()
             self._reset_connect_button(status_message, status)
-            self._client = weakref.ref(client)
+            self._client = client
             self._connect_button.setVisible(True)
 
         if not client or not dcc.is_standalone():
@@ -326,7 +318,6 @@ class ToolsetWidget(stack.StackItem, object):
         self._stacked_widget.setCurrentIndex(1) if self.count() > 0 else self._stacked_widget.setCurrentIndex(0)
         self.post_content_setup()
         self.update_display_button()
-        self.expand()
 
     def set_attacher(self, attacher):
         """
@@ -442,7 +433,7 @@ class ToolsetWidget(stack.StackItem, object):
         self._widgets.append(widget)
         widget.setVisible(False)
         widget.setProperty('color', self._icon_color)
-        widget.setParent(self._widget_hider)
+        widget.setParent(self)
         self._contents_layout.addWidget(widget)
 
         self._widgets[0].setVisible(True)
@@ -542,7 +533,6 @@ class ToolsetWidget(stack.StackItem, object):
         self._display_mode_button.set_icon_color(color)
         self._help_button.set_icon_color((color[0] * darken, color[1] * darken, color[2] * darken))
         self._manual_button.set_icon_color((color[0] * darken, color[1] * darken, color[2] * darken))
-        self._title_frame.delete_button.set_icon_color(color)
 
     def populate_widgets(self):
 
@@ -646,9 +636,6 @@ class ToolsetWidget(stack.StackItem, object):
 
         return instance_props
 
-    def _stop_selection_callback(self):
-        print('Stop Selection Callbacks ...')
-
     def _reset_connect_button(self, text='No connected to any DCC', severity='warning'):
         self._connect_button.setEnabled(False)
         self._connect_button.setToolTip(str(text))
@@ -732,10 +719,6 @@ class ToolsetWidget(stack.StackItem, object):
 
         pass
 
-    def _on_activate_event(self, event, emit=True):
-        self._on_toggle_contents(emit=emit)
-        event.ignore()
-
     def _on_open_help(self):
         """
         Internal callback function that is called when help button is clicked
@@ -770,9 +753,6 @@ class ToolsetWidget(stack.StackItem, object):
 
         self.helpModeChanged.emit(self._help_mode)
 
-    def _on_stop_callbacks(self):
-        self._stop_selection_callback()
-
     def _on_show_preferences_dialog(self):
 
         if not self.attacher:
@@ -804,7 +784,7 @@ class ToolsetWidget(stack.StackItem, object):
         win32.focus_window_from_pid(os.getpid(), restore=False)
 
     def _on_refresh_client(self):
-        self.client.connect()
+        self.client._connect()
         self.client.update_client(tool_id=self.ID)
         status = self.client.get_status_level()
         status_message = self.client.get_status_message()

@@ -12,7 +12,7 @@ import string
 import getpass
 from functools import partial
 
-from Qt.QtCore import Qt, QObject, Signal, QSize, QRectF, QFileInfo, QDir
+from Qt.QtCore import Qt, Signal, QSize, QRectF, QFileInfo, QDir
 from Qt.QtWidgets import QApplication, QGroupBox, QDesktopWidget, QDialog, QStatusBar, QSizePolicy, QGraphicsView
 from Qt.QtWidgets import QGraphicsScene, QFileIconProvider, QListWidgetItem, QMessageBox, QInputDialog
 from Qt.QtWidgets import QWidget, QLabel, QFrame, QPushButton, QSlider, QLineEdit, QComboBox, QCheckBox, QRadioButton

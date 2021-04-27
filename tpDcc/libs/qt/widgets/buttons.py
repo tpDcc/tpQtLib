@@ -925,7 +925,7 @@ class BaseMenuButton(QPushButton, ButtonIcons):
     leftDoubleClicked = Signal()
     middleDoubleClicked = Signal()
     rightDoubleClicked = Signal()
-    cicked = leftClicked
+    clicked = leftClicked
 
     menuAboutToShow = Signal()
     middleMenuAboutToShow = Signal()
@@ -1047,7 +1047,7 @@ class BaseMenuButton(QPushButton, ButtonIcons):
     def mouseDoubleClickEvent(self, event):
         self._last_click = self.DOUBLE_CLICK
 
-    def menu(self, mouse_menu=Qt.LeftButton, searchable=False, auto_create=True):
+    def menu(self, mouse_menu=Qt.LeftButton, searchable=False, auto_create=True, parent=None):
         """
         Overrides base menu function
         Get menu depending on the mouse button pressed
@@ -1058,7 +1058,8 @@ class BaseMenuButton(QPushButton, ButtonIcons):
         """
 
         if not self._click_menu[mouse_menu] and auto_create:
-            self._click_menu[mouse_menu] = BaseMenuButton.SearchMenu(objectName='searchButton', title='Search Button')
+            self._click_menu[mouse_menu] = BaseMenuButton.SearchMenu(
+                objectName='searchButton', title='Search Button', parent=parent)
             self._click_menu[mouse_menu].triggered.connect(lambda action: self.actionTriggered.emit(action, mouse_menu))
             self._click_menu[mouse_menu].triggered.connect(partial(self._on_menu_changed, mouse_menu))
             if not searchable:
